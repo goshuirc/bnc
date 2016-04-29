@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/DanielOaks/gircbnc/ircbnc"
@@ -14,16 +15,25 @@ import (
 func main() {
 	usage := `gIRCbnc.
 
+gIRCbnc is an IRC bouncer.
+
 Usage:
-	gircbnc start
+	gircbnc start [--conf <filename>]
 	gircbnc -h | --help
 	gircbnc --version
 
 Options:
-	-h --help  Show this screen.
-	--version  Show version.`
+	--conf <filename>  Configuration file to use [default: bnc.yaml].
+	-h --help          Show this screen.
+	--version          Show version.`
 
 	arguments, _ := docopt.Parse(usage, nil, true, ircbnc.Version(), false)
+
+	configfile := arguments["--conf"].(string)
+	config, err := ircbnc.LoadConfig(configfile)
+	if err != nil {
+		log.Fatal("Config file did not load successfully:", err.Error())
+	}
 
 	if arguments["start"].(bool) {
 		fmt.Println("Starting gIRCbnc")
@@ -35,5 +45,6 @@ Options:
 		}
 
 		// start
+		fmt.Println(config.Bouncer.Listeners)
 	}
 }

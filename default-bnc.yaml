@@ -1,0 +1,17 @@
+# This is the gIRCbnc config file
+
+# bouncer configuration
+bouncer:
+    # database filename
+    database: bnc.db
+
+    # addresses to listen on
+    listeners:
+        #- ":6667"
+        - ":6697"
+
+    # listeners to use tls on
+    tls-listeners:
+        ":6697":
+            cert: tls.crt
+            key: tls.key

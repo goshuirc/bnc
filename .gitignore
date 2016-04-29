@@ -88,3 +88,7 @@ _testmain.go
 *.test
 *.prof
 
+
+### gIRCbnc ###
+/bnc.*
+/tls.*
