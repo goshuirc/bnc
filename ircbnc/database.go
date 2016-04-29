@@ -18,6 +18,7 @@ const LatestDbVersion = 1
 
 // InitDB creates the new blank database
 func InitDB(path string) {
+	//TODO(dan): Warn before removing old db
 	os.Remove(path)
 	db := OpenDB(path)
 	defer db.Close()
@@ -49,18 +50,27 @@ CREATE TABLE server_connections (
 
 CREATE TABLE server_connection_accepted_certs (
 	user_id TEXT NOT NULL,
-	server_connection_name TEXT NOT NULL,
+	sc_name TEXT NOT NULL,
 	cert TEXT NOT NULL,
-	FOREIGN KEY(user_id, server_connection_name) REFERENCES server_connections(user_id, name)
+	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name)
 );
 
 CREATE TABLE server_connection_addresses (
 	user_id TEXT NOT NULL,
-	server_connection_name TEXT NOT NULL,
+	sc_name TEXT NOT NULL,
 	address TEXT NOT NULL,
 	port INTEGER,
 	use_ssl BOOL,
-	FOREIGN KEY(user_id, server_connection_name) REFERENCES server_connections(user_id, name)
+	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name)
+);
+
+CREATE TABLE server_connection_channels (
+	user_id TEXT NOT NULL,
+	sc_name TEXT NOT NULL,
+	name TEXT NOT NULL,
+	key TEXT,
+	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name),
+	PRIMARY KEY(user_id, sc_name, name)
 );`, LatestDbVersion)
 	if err != nil {
 		log.Fatal("initdb error: ", err)
