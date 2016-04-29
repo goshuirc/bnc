@@ -18,6 +18,7 @@ func main() {
 gIRCbnc is an IRC bouncer.
 
 Usage:
+	gircbnc initdb [--conf <filename>]
 	gircbnc start [--conf <filename>]
 	gircbnc -h | --help
 	gircbnc --version
@@ -35,7 +36,10 @@ Options:
 		log.Fatal("Config file did not load successfully:", err.Error())
 	}
 
-	if arguments["start"].(bool) {
+	if arguments["initdb"].(bool) {
+		fmt.Println("Creating initial database")
+		ircbnc.InitDB(config.Bouncer.DatabasePath)
+	} else if arguments["start"].(bool) {
 		fmt.Println("Starting gIRCbnc")
 
 		var err error

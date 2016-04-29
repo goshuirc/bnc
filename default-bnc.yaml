@@ -3,7 +3,7 @@
 # bouncer configuration
 bouncer:
     # database filename
-    database: bnc.db
+    database-path: bnc.db
 
     # addresses to listen on
     listeners:

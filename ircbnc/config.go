@@ -1,6 +1,6 @@
 // This file is based on 'config.go' from Oragono/Ergonomadic
 // it is modified by Daniel Oaks <daniel@danieloaks.net>
-// released under the ISC license
+// covered by the MIT license in the LICENSE.ergonomadic file
 
 package ircbnc
 
@@ -34,7 +34,7 @@ func (conf *TLSListenConfig) Config() (*tls.Config, error) {
 // Config defines a configuration file for gIRCbnc
 type Config struct {
 	Bouncer struct {
-		Database     string
+		DatabasePath string `yaml:"database-path"`
 		Listeners    []string
 		TLSListeners map[string]*TLSListenConfig `yaml:"tls-listeners"`
 	}
@@ -65,8 +65,8 @@ func LoadConfig(filename string) (config *Config, err error) {
 		return nil, err
 	}
 
-	if config.Bouncer.Database == "" {
-		return nil, errors.New("Database filename is missing")
+	if config.Bouncer.DatabasePath == "" {
+		return nil, errors.New("Database path is missing")
 	}
 	if len(config.Bouncer.Listeners) == 0 {
 		return nil, errors.New("No listeners are defined")
