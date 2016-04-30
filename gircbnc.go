@@ -37,8 +37,10 @@ Options:
 	}
 
 	if arguments["initdb"].(bool) {
-		fmt.Println("Creating initial database")
 		ircbnc.InitDB(config.Bouncer.DatabasePath)
+
+		db := ircbnc.OpenDB(config.Bouncer.DatabasePath)
+		InitialSetup(db)
 	} else if arguments["start"].(bool) {
 		fmt.Println("Starting gIRCbnc")
 
