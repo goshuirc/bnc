@@ -81,7 +81,7 @@ func Error(text string) {
 }
 
 // InitialSetup performs the initial gircbnc setup
-func InitialSetup(*sql.DB) {
+func InitialSetup(db *sql.DB) {
 	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), "Welcome to", cbCyan("gIRCbnc"))
 	Note("We will now run through basic setup.")
 
@@ -92,6 +92,8 @@ func InitialSetup(*sql.DB) {
 	if err != nil {
 		log.Fatal("Could not generate cryptographically-secure salt for the bouncer:", err.Error())
 	}
+
+	db.Exec(`INSERT INTO ircbnc (key, value) VALUES ("salt",?)`, base64.StdEncoding.EncodeToString(bncSalt))
 
 	Section("Admin user settings")
 	var username string
@@ -145,10 +147,6 @@ func InitialSetup(*sql.DB) {
 		passHash, err = ircbnc.GenerateFromPassword(bncSalt, userSalt, password)
 
 		if err == nil {
-			//TODO(dan): Just here so that it doesn't yell at us about not using passHash
-			// This will be ripped out and it will just silently break
-			Note("Password successfully hashed!")
-			Warn(fmt.Sprintf("Password hash is: %s", base64.StdEncoding.EncodeToString(passHash)))
 			break
 		} else {
 			Error(fmt.Sprintf("Could not generate password: %s", err.Error()))
@@ -209,8 +207,8 @@ func InitialSetup(*sql.DB) {
 		log.Fatal(err.Error())
 	}
 
-	Note(ircNick)
-	Note(ircFbNick)
-	Note(ircUser)
-	Note(ircReal)
+	db.Exec(`INSERT INTO users (id, salt, password, default_nickname, default_fallback_nickname, default_username, default_realname) VALUES (?,?,?,?,?,?,?)`,
+		goodUsername, userSalt, passHash, ircNick, ircFbNick, ircUser, ircReal)
+
+	Note("User created!")
 }

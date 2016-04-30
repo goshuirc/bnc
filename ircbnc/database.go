@@ -23,17 +23,19 @@ func InitDB(path string) {
 	db := OpenDB(path)
 	defer db.Close()
 	_, err := db.Exec(`
-CREATE TABLE gircbnc (
+CREATE TABLE ircbnc (
 	key TEXT NOT NULL UNIQUE,
 	value TEXT
 );
 
-INSERT INTO gircbnc (key, value) VALUES ("db_version", ?);
+INSERT INTO ircbnc (key, value) VALUES ("db_version", ?);
 
 CREATE TABLE users (
 	id TEXT NOT NULL UNIQUE,
+	salt TEXT NOT NULL,
 	password TEXT NOT NULL,
 	default_nickname TEXT,
+	default_fallback_nickname TEXT,
 	default_username TEXT,
 	default_realname TEXT
 );
