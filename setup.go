@@ -44,7 +44,7 @@ func Query(prompt string) (string, error) {
 
 	in := bufio.NewReader(os.Stdin)
 	response, err := in.ReadString('\n')
-	return response, err
+	return strings.TrimRight(response, "\r\n"), err
 }
 
 // QueryNoEcho asks for a value from the user without echoing what they type
@@ -54,6 +54,20 @@ func QueryNoEcho(prompt string) (string, error) {
 	response, err := terminal.ReadPassword(int(syscall.Stdin))
 	fmt.Print("\n")
 	return string(response), err
+}
+
+// QueryDefault asks for a value, falling back to a default
+func QueryDefault(prompt string, defaultValue string) (string, error) {
+	response, err := Query(prompt)
+
+	if err != nil {
+		return "", err
+	}
+
+	if len(strings.TrimSpace(response)) < 1 {
+		return defaultValue, nil
+	}
+	return response, nil
 }
 
 // Warn warns the user about something
@@ -141,4 +155,62 @@ func InitialSetup(*sql.DB) {
 			continue
 		}
 	}
+
+	// get IRC details
+	var ircNick string
+	for {
+		ircNick, err = Query("Enter Nickname: ")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		ircNick, err = ircbnc.IrcName(ircNick)
+		if err == nil {
+			break
+		} else {
+			Error(err.Error())
+		}
+	}
+
+	var ircFbNick string
+	defaultFallbackNick := fmt.Sprintf("%s_", ircNick)
+	for {
+		ircFbNick, err = QueryDefault(fmt.Sprintf("Enter Fallback Nickname [%s]: ", defaultFallbackNick), defaultFallbackNick)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		ircFbNick, err = ircbnc.IrcName(ircFbNick)
+		if err == nil {
+			break
+		} else {
+			Error(err.Error())
+		}
+	}
+
+	var ircUser string
+	for {
+		ircUser, err = Query("Enter Username: ")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		ircUser, err = ircbnc.IrcName(ircUser)
+		if err == nil {
+			break
+		} else {
+			Error(err.Error())
+		}
+	}
+
+	var ircReal string
+	ircReal, err = Query("Enter Realname: ")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	Note(ircNick)
+	Note(ircFbNick)
+	Note(ircUser)
+	Note(ircReal)
 }

@@ -4,17 +4,9 @@
 package ircbnc
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/DanielOaks/go-idn/idna2003/stringprep"
-)
-
-var (
-	errNameBadChar = errors.New("Name contained a disallowed character.")
-	errNameDigit   = errors.New("The first character of a name cannot be a digit.")
-	errNameSpace   = errors.New("Names cannot contain whitespace.")
-	errNameNil     = errors.New("Names need to be at least one character long.")
 )
 
 // Username takes the given name and returns a gircbnc username
