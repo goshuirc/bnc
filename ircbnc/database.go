@@ -38,6 +38,13 @@ CREATE TABLE users (
 	default_realname TEXT
 );
 
+CREATE TABLE user_permissions (
+	user_id TEXT NOT NULL,
+	permission TEXT NOT NULL,
+	FOREIGN KEY(user_id) REFERENCES users(id),
+	PRIMARY KEY(user_id, permission)
+);
+
 CREATE TABLE server_connections (
 	user_id TEXT NOT NULL,
 	name TEXT NOT NULL,
