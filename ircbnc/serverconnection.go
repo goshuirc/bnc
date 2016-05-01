@@ -134,7 +134,7 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.InitialUser = sc.Username
 	server.InitialRealName = sc.Realname
 	server.ConnectionPass = sc.Password
-	//TODO(dan): Fallback Nick
+	server.FallbackNicks = append(server.FallbackNicks, sc.FbNickname)
 
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
