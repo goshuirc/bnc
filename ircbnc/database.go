@@ -53,6 +53,7 @@ CREATE TABLE server_connections (
 	nickname TEXT,
 	username TEXT,
 	realname TEXT,
+	password TEXT,
 	FOREIGN KEY(user_id) REFERENCES users(id),
 	PRIMARY KEY(user_id, name)
 );
@@ -69,7 +70,7 @@ CREATE TABLE server_connection_addresses (
 	sc_name TEXT NOT NULL,
 	address TEXT NOT NULL,
 	port INTEGER,
-	use_ssl BOOL,
+	use_tls BOOL,
 	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name)
 );
 
