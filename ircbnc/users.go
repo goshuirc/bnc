@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+
+	"github.com/DanielOaks/girc-go/client"
 )
 
 // User represents an ircbnc user.
@@ -73,6 +75,8 @@ func LoadUser(config *Config, db *sql.DB, id string) (*User, error) {
 }
 
 // StartServerConnections starts running the server connections of this user.
-func (*User) StartServerConnections() {
-	fmt.Println("STARTING SCS")
+func (user *User) StartServerConnections(r gircclient.Reactor) {
+	for _, sc := range user.Networks {
+		sc.Start(r)
+	}
 }

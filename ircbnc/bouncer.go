@@ -8,6 +8,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+
+	"github.com/DanielOaks/girc-go/client"
 )
 
 // Bouncer represents an IRC bouncer.
@@ -31,7 +33,6 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 	b.Listeners = make(map[int]net.Listener)
 
 	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "salt")
-
 	var saltString string
 	err := saltRow.Scan(&saltString)
 	if err != nil {
@@ -48,6 +49,10 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 
 // Run starts the bouncer, creating the listeners and server connections.
 func (b *Bouncer) Run() error {
+	// create reactor
+	scReactor := gircclient.NewReactor()
+
+	// load users
 	rows, err := b.DB.Query(`SELECT id FROM users`)
 	if err != nil {
 		return fmt.Errorf("Could not run bouncer (loading users from db): %s", err.Error())
@@ -64,7 +69,7 @@ func (b *Bouncer) Run() error {
 			return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
 		}
 
-		user.StartServerConnections()
+		user.StartServerConnections(scReactor)
 	}
 
 	return nil
