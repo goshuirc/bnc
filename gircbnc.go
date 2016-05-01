@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/DanielOaks/gircbnc/ircbnc"
 	"github.com/docopt/docopt-go"
@@ -42,15 +41,13 @@ Options:
 		db := ircbnc.OpenDB(config.Bouncer.DatabasePath)
 		InitialSetup(db)
 	} else if arguments["start"].(bool) {
-		fmt.Println("Starting gIRCbnc")
+		fmt.Println("Starting", cbCyan("gIRCbnc"))
 
-		var err error
+		db := ircbnc.OpenDB(config.Bouncer.DatabasePath)
+		bouncer, err := ircbnc.NewBouncer(config, db)
 		if err != nil {
-			fmt.Println("Connection error:", err)
-			os.Exit(1)
+			log.Fatal("Could not create bouncer:", err.Error())
 		}
-
-		// start
-		fmt.Println(config.Bouncer.Listeners)
+		bouncer.Run()
 	}
 }

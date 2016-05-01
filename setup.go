@@ -230,6 +230,9 @@ func InitialSetup(db *sql.DB) {
 
 	db.Exec(`INSERT INTO users (id, salt, password, default_nickname, default_fallback_nickname, default_username, default_realname) VALUES (?,?,?,?,?,?,?)`,
 		goodUsername, userSalt, passHash, ircNick, ircFbNick, ircUser, ircReal)
+	//NOTE(dan) first user is automatically a root admin -- they can do anything
+	db.Exec(`INSERT INTO user_permissions (user_id, permission) VALUE (?,?)`,
+		goodUsername, "*")
 
 	// now setup default networks for that user
 	Section("Network Setup")
