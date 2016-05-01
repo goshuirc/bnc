@@ -47,6 +47,25 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 }
 
 // Run starts the bouncer, creating the listeners and server connections.
-func (b *Bouncer) Run() {
-	fmt.Println("Running bouncer!")
+func (b *Bouncer) Run() error {
+	rows, err := b.DB.Query(`SELECT id FROM users`)
+	if err != nil {
+		return fmt.Errorf("Could not run bouncer (loading users from db): %s", err.Error())
+	}
+	for rows.Next() {
+		var id string
+		err = rows.Scan(&id)
+		if err != nil {
+			return fmt.Errorf("Could not run bouncer (scanning user names from db): %s", err.Error())
+		}
+
+		user, err := LoadUser(b.Config, b.DB, id)
+		if err != nil {
+			return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
+		}
+
+		user.StartServerConnections()
+	}
+
+	return nil
 }

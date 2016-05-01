@@ -50,10 +50,11 @@ CREATE TABLE user_permissions (
 CREATE TABLE server_connections (
 	user_id TEXT NOT NULL,
 	name TEXT NOT NULL,
-	nickname TEXT,
-	username TEXT,
-	realname TEXT,
-	password TEXT,
+	nickname TEXT DEFAULT "",
+	fallback_nickname TEXT DEFAULT "",
+	username TEXT DEFAULT "",
+	realname TEXT DEFAULT "",
+	password TEXT DEFAULT "",
 	FOREIGN KEY(user_id) REFERENCES users(id),
 	PRIMARY KEY(user_id, name)
 );
@@ -78,7 +79,7 @@ CREATE TABLE server_connection_channels (
 	user_id TEXT NOT NULL,
 	sc_name TEXT NOT NULL,
 	name TEXT NOT NULL,
-	key TEXT,
+	key TEXT DEFAULT "",
 	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name),
 	PRIMARY KEY(user_id, sc_name, name)
 );`, LatestDbVersion)

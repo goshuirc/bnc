@@ -48,6 +48,10 @@ Options:
 		if err != nil {
 			log.Fatal("Could not create bouncer:", err.Error())
 		}
-		bouncer.Run()
+
+		err = bouncer.Run()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 }

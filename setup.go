@@ -140,6 +140,7 @@ func InitialSetup(db *sql.DB) {
 
 	// generate our salts
 	userSalt, err := ircbnc.NewSalt()
+	encodedUserSalt := base64.StdEncoding.EncodeToString(userSalt)
 	if err != nil {
 		log.Fatal("Could not generate cryptographically-secure salt for the user:", err.Error())
 	}
@@ -229,7 +230,7 @@ func InitialSetup(db *sql.DB) {
 	}
 
 	db.Exec(`INSERT INTO users (id, salt, password, default_nickname, default_fallback_nickname, default_username, default_realname) VALUES (?,?,?,?,?,?,?)`,
-		goodUsername, userSalt, passHash, ircNick, ircFbNick, ircUser, ircReal)
+		goodUsername, encodedUserSalt, passHash, ircNick, ircFbNick, ircUser, ircReal)
 	//NOTE(dan) first user is automatically a root admin -- they can do anything
 	db.Exec(`INSERT INTO user_permissions (user_id, permission) VALUE (?,?)`,
 		goodUsername, "*")
@@ -292,7 +293,7 @@ func InitialSetup(db *sql.DB) {
 
 		var serverPort int
 		for {
-			portString, err := QueryDefault(fmt.Sprintf("Server Port [%s]: ", strconv.Itoa(defaultPort)), strconv.Itoa(defaultPort))
+			portString, err := QueryDefault(fmt.Sprintf("Server Port [%d]: ", defaultPort), strconv.Itoa(defaultPort))
 			if err != nil {
 				log.Fatal(err.Error())
 			}
