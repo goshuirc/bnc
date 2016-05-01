@@ -348,4 +348,7 @@ func InitialSetup(db *sql.DB) {
 				goodUsername, goodNetName, channel)
 		}
 	}
+
+	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), cbCyan("gIRCbnc"), "is now configured!")
+	Note("You can now launch gIRCbnc and connect to it with your IRC client")
 }
