@@ -32,6 +32,7 @@ type ServerConnection struct {
 	FbNickname string
 	Username   string
 	Realname   string
+	Channels   map[string]string
 
 	Password  string
 	Addresses []ServerConnectionAddress
@@ -64,7 +65,22 @@ func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection
 		sc.Realname = user.DefaultReal
 	}
 
-	rows, err := db.Query(`SELECT address, port, use_tls FROM server_connection_addresses WHERE user_id = ? AND sc_name = ?`,
+	// load channels
+	sc.Channels = make(map[string]string)
+	rows, err := db.Query(`SELECT name, key FROM server_connection_channels WHERE user_id = ? AND sc_name = ?`,
+		user.ID, name)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create new ServerConnection (loading address details from db): %s", err.Error())
+	}
+	for rows.Next() {
+		var name, key string
+		rows.Scan(&name, &key)
+
+		sc.Channels[name] = key
+	}
+
+	// load addresses
+	rows, err = db.Query(`SELECT address, port, use_tls FROM server_connection_addresses WHERE user_id = ? AND sc_name = ?`,
 		user.ID, name)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (loading address details from db): %s", err.Error())
@@ -117,9 +133,8 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.InitialNick = sc.Nickname
 	server.InitialUser = sc.Username
 	server.InitialRealName = sc.Realname
-
+	server.ConnectionPass = sc.Password
 	//TODO(dan): Fallback Nick
-	//TODO(dan): Password
 
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
@@ -136,5 +151,8 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 
 	if err != nil {
 		fmt.Println("ERROR: Could not connect to", name, err.Error())
+		return
 	}
+
+	go server.ReceiveLoop()
 }
