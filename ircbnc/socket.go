@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 )
 
+// Socket represents an IRC socket.
 type Socket struct {
 	closed bool
 	conn   net.Conn
@@ -17,6 +19,7 @@ type Socket struct {
 	buffer string
 }
 
+// NewSocket returns a new Socket.
 func NewSocket(conn net.Conn) Socket {
 	return Socket{
 		conn:   conn,
@@ -24,6 +27,7 @@ func NewSocket(conn net.Conn) Socket {
 	}
 }
 
+// Close stops a Socket from being able to send/receive any more data.
 func (socket *Socket) Close() {
 	if socket.closed {
 		return
@@ -32,6 +36,7 @@ func (socket *Socket) Close() {
 	socket.conn.Close()
 }
 
+// Read returns a single IRC line from a Socket.
 func (socket *Socket) Read() (string, error) {
 	if socket.closed {
 		return "", io.EOF
@@ -45,6 +50,10 @@ func (socket *Socket) Read() (string, error) {
 	// read last message properly (such as ERROR/QUIT/etc), just fail next reads/writes
 	if err == io.EOF {
 		socket.Close()
+	}
+
+	if err == io.EOF && strings.TrimSpace(line) != "" {
+		// don't do anything
 	} else if err != nil {
 		return "", err
 	}
@@ -52,6 +61,7 @@ func (socket *Socket) Read() (string, error) {
 	return line, nil
 }
 
+// Write sends the given line out of Socket.
 func (socket *Socket) Write(line string) error {
 	if socket.closed {
 		return io.EOF

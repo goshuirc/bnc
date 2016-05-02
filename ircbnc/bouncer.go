@@ -111,9 +111,9 @@ func (b *Bouncer) Run() error {
 			for {
 				conn, err := listener.Accept()
 				if err != nil {
-					fmt.Printf("%s accept error: %s", address, err)
+					fmt.Println(fmt.Sprintf("%s accept error: %s", address, err))
 				}
-				fmt.Printf("%s accept: %s", address, conn.RemoteAddr())
+				fmt.Println(fmt.Sprintf("%s accept: %s", address, conn.RemoteAddr()))
 
 				b.newConns <- conn
 			}

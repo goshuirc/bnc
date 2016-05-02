@@ -17,7 +17,9 @@ type Listener struct {
 	ConnectTime time.Time
 	socket      Socket
 	ClientNick  string
+	Source      string
 	Registered  bool
+	regLocks    map[string]bool
 }
 
 // NewListener creates a new Listener.
@@ -27,6 +29,12 @@ func NewListener(b *Bouncer, conn net.Conn) {
 		Bouncer:     b,
 		ConnectTime: now,
 		socket:      NewSocket(conn),
+		Source:      "bouncer.example.com",
+		regLocks: map[string]bool{
+			"CAP":  true,
+			"NICK": false,
+			"USER": false,
+		},
 	}
 	go listener.Run()
 }
@@ -49,6 +57,12 @@ func (listener *Listener) Run() {
 	}
 	listener.Send(nil, "", "ERROR", "Closing connection")
 	listener.socket.Close()
+}
+
+// DumpRegistration dumps the registration numerics/replies to the listener.
+func (listener *Listener) DumpRegistration() {
+	//TODO(dan): Dump registration.
+	listener.Send(nil, listener.Source, "001", listener.ClientNick, "Welcome to the COOLGUY IRC network.")
 }
 
 // Send sends an IRC line to the listener.

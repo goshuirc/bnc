@@ -22,13 +22,45 @@ func (cmd *Command) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 		listener.Send(nil, "", "461", listener.ClientNick, msg.Command, "Not enough parameters")
 		return false
 	}
-	return cmd.handler(listener, msg)
+	exiting := cmd.handler(listener, msg)
+
+	// after each command, see if we can send registration to the listener
+	if !listener.Registered {
+		isRegistered := true
+		for _, fulfilled := range listener.regLocks {
+			if !fulfilled {
+				isRegistered = false
+				break
+			}
+		}
+		if isRegistered {
+			listener.DumpRegistration()
+		}
+	}
+
+	return exiting
 }
 
 // Commands holds all commands executable by a client connected to a listener.
 var Commands = map[string]Command{
 	"NICK": Command{
 		handler:      nickHandler,
+		usablePreReg: true,
+		minParams:    1,
+	},
+	"USER": Command{
+		handler:      userHandler,
+		usablePreReg: true,
+		minParams:    4,
+	},
+	"PASS": Command{
+		handler:      passHandler,
+		usablePreReg: true,
+		minParams:    1,
+	},
+	//TODO(dan): Replace fake CAP handler with real one.
+	"CAP": Command{
+		handler:      passHandler,
 		usablePreReg: true,
 		minParams:    1,
 	},
