@@ -131,8 +131,7 @@ func (b *Bouncer) Run() error {
 			log.Fatal("Shutting down! (TODO: write real code)")
 			done = true
 		case conn := <-b.newConns:
-			//TODO(dan): Open new listener
-			fmt.Println("Open", conn)
+			NewListener(b, conn)
 		}
 	}
 
