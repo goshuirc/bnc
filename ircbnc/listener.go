@@ -72,6 +72,7 @@ func (listener *Listener) DumpRegistration() {
 		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
 	} else {
 		//TODO(dan): Dump registration.
+		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "We should be dumping the startup info from the serverconnection!")
 	}
 }
 

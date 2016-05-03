@@ -58,9 +58,8 @@ var Commands = map[string]Command{
 		usablePreReg: true,
 		minParams:    1,
 	},
-	//TODO(dan): Replace fake CAP handler with real one.
 	"CAP": Command{
-		handler:      passHandler,
+		handler:      capHandler,
 		usablePreReg: true,
 		minParams:    1,
 	},

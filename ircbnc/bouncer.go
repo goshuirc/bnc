@@ -86,12 +86,13 @@ func (b *Bouncer) Run() error {
 			return fmt.Errorf("Could not run bouncer (scanning user names from db): %s", err.Error())
 		}
 
-		user, err := LoadUser(b.Config, b.DB, id)
+		user, err := loadUser(b.Config, b.DB, id)
 		if err != nil {
 			return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
 		}
 
 		user.StartServerConnections(scReactor)
+		b.Users[id] = user
 	}
 
 	// open listeners and wait

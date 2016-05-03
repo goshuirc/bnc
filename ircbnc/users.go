@@ -16,33 +16,35 @@ type User struct {
 	Config *Config
 	DB     *sql.DB
 
-	ID          string
-	Name        string
-	Salt        []byte
-	Permissions []string
+	ID   string
+	Name string
+
+	HashedPassword []byte
+	Salt           []byte
+	Permissions    []string
 
 	DefaultNick   string
 	DefaultFbNick string
 	DefaultUser   string
 	DefaultReal   string
 
-	Networks map[string]ServerConnection
+	Networks map[string]*ServerConnection
 }
 
 // LoadUser returns the given user.
-func LoadUser(config *Config, db *sql.DB, id string) (*User, error) {
+func loadUser(config *Config, db *sql.DB, id string) (*User, error) {
 	var user User
 	user.ID = id
 	user.Name = id //TODO(dan): Store Name and ID separately in the future if we want to
 	user.Config = config
 	user.DB = db
 
-	user.Networks = make(map[string]ServerConnection)
+	user.Networks = make(map[string]*ServerConnection)
 
-	userRow := db.QueryRow(`SELECT salt, default_nickname, default_fallback_nickname, default_username, default_realname FROM users WHERE id = ?`,
+	userRow := db.QueryRow(`SELECT password, salt, default_nickname, default_fallback_nickname, default_username, default_realname FROM users WHERE id = ?`,
 		id)
 	var saltString string
-	err := userRow.Scan(&saltString, &user.DefaultNick, &user.DefaultFbNick, &user.DefaultUser, &user.DefaultReal)
+	err := userRow.Scan(&user.HashedPassword, &saltString, &user.DefaultNick, &user.DefaultFbNick, &user.DefaultUser, &user.DefaultReal)
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (scanning user info from db): %s", err.Error())
 	}
@@ -68,7 +70,7 @@ func LoadUser(config *Config, db *sql.DB, id string) (*User, error) {
 			return nil, fmt.Errorf("Could not load user (loading sc): %s", err.Error())
 		}
 
-		user.Networks[name] = *sc
+		user.Networks[name] = sc
 	}
 
 	return &user, nil
