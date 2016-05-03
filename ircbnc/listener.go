@@ -20,6 +20,9 @@ type Listener struct {
 	Source      string
 	Registered  bool
 	regLocks    map[string]bool
+
+	User             *User
+	ServerConnection *ServerConnection
 }
 
 // NewListener creates a new Listener.
@@ -29,7 +32,7 @@ func NewListener(b *Bouncer, conn net.Conn) {
 		Bouncer:     b,
 		ConnectTime: now,
 		socket:      NewSocket(conn),
-		Source:      "bouncer.example.com",
+		Source:      b.Source,
 		regLocks: map[string]bool{
 			"CAP":  true,
 			"NICK": false,
@@ -61,8 +64,14 @@ func (listener *Listener) Run() {
 
 // DumpRegistration dumps the registration numerics/replies to the listener.
 func (listener *Listener) DumpRegistration() {
-	//TODO(dan): Dump registration.
-	listener.Send(nil, listener.Source, "001", listener.ClientNick, "Welcome to the COOLGUY IRC network.")
+	if listener.ServerConnection == nil {
+		listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to gIRCbnc -")
+		listener.Send(nil, listener.Source, "422", listener.ClientNick, "MOTD File is missing")
+		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
+		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
+	} else {
+		//TODO(dan): Dump registration.
+	}
 }
 
 // Send sends an IRC line to the listener.

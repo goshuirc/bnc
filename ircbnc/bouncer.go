@@ -27,11 +27,14 @@ type Bouncer struct {
 	Config *Config
 	DB     *sql.DB
 
-	Users     map[string]User
+	Users     map[string]*User
 	Listeners []net.Listener
 
 	newConns chan net.Conn
 	signals  chan os.Signal
+
+	Source       string
+	StatusSource string
 
 	Salt []byte
 }
@@ -45,7 +48,11 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 	b.newConns = make(chan net.Conn)
 	b.signals = make(chan os.Signal, len(ServerSignals))
 
-	b.Users = make(map[string]User)
+	b.Users = make(map[string]*User)
+
+	// source on our outgoing message/status bot/etc
+	b.Source = "irc.gircbnc"
+	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
 
 	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "salt")
 	var saltString string
