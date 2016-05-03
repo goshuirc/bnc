@@ -30,6 +30,7 @@ func NewListener(b *Bouncer, conn net.Conn) {
 	now := time.Now()
 	listener := &Listener{
 		Bouncer:     b,
+		ClientNick:  "*",
 		ConnectTime: now,
 		socket:      NewSocket(conn),
 		Source:      b.Source,
