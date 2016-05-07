@@ -46,14 +46,14 @@ func NewListener(b *Bouncer, conn net.Conn) {
 
 // DumpRegistration dumps the registration numerics/replies to the listener.
 func (listener *Listener) DumpRegistration() {
-	if listener.ServerConnection == nil {
+	sc := listener.ServerConnection
+	if sc == nil {
 		listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to gIRCbnc -")
 		listener.Send(nil, listener.Source, "422", listener.ClientNick, "MOTD File is missing")
 		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
 		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
 	} else {
-		//TODO(dan): Dump registration.
-		listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "We should be dumping the startup info from the serverconnection!")
+		sc.DumpRegistration(listener)
 	}
 }
 

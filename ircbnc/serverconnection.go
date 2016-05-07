@@ -13,6 +13,7 @@ import (
 	"github.com/DanielOaks/girc-go/client"
 	"github.com/DanielOaks/girc-go/eventmgr"
 	"github.com/DanielOaks/girc-go/ircfmt"
+	"github.com/DanielOaks/girc-go/ircmsg"
 )
 
 // ServerConnectionAddress represents an address a ServerConnection can join.
@@ -33,6 +34,10 @@ type ServerConnection struct {
 	Username   string
 	Realname   string
 	Channels   map[string]string
+
+	storingConnectMessages bool
+	connectMessages        []ircmsg.IrcMessage
+	Listeners              []Listener
 
 	Password  string
 	Addresses []ServerConnectionAddress
@@ -108,10 +113,61 @@ func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection
 	return &sc, nil
 }
 
+var storedConnectLines = map[string]bool{
+	"001": true,
+	"002": true,
+	"003": true,
+	"004": true,
+	"005": true,
+	"250": true,
+	"251": true,
+	"252": true,
+	"254": true,
+	"255": true,
+	"265": true,
+	"266": true,
+	"372": true,
+	"375": true,
+	"376": true,
+	"422": true,
+}
+
+// connectLinesHandler extracts and stores the connection lines.
+func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.InfoMap) {
+	if !sc.storingConnectMessages {
+		return
+	}
+
+	line := info["data"].(string)
+	message, err := ircmsg.ParseLine(line)
+	if err != nil {
+		return
+	}
+
+	_, storeMessage := storedConnectLines[message.Command]
+	if storeMessage {
+		// fmt.Println("IN:", message)
+		sc.connectMessages = append(sc.connectMessages, message)
+	}
+
+	if message.Command == "376" {
+		sc.storingConnectMessages = false
+	}
+}
+
+// DumpRegistration dumps the registration messages of this server to the given Listener.
+func (sc *ServerConnection) DumpRegistration(listener *Listener) {
+	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "We should be dumping the startup info from the serverconnection!")
+	for _, message := range sc.connectMessages {
+		message.Params[0] = listener.ClientNick
+		listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
+	}
+}
+
 // rawHandler prints raw messages to and from the server.
 //TODO(dan): This is only VERY INITIAL, for use while we are debugging.
 func rawHandler(event string, info eventmgr.InfoMap) {
-	sc := info["server"].(*gircclient.ServerConnection)
+	server := info["server"].(*gircclient.ServerConnection)
 	direction := info["direction"].(string)
 	line := info["data"].(string)
 
@@ -122,7 +178,7 @@ func rawHandler(event string, info eventmgr.InfoMap) {
 		arrow = " ->"
 	}
 
-	fmt.Println(sc.Name, arrow, ircfmt.Escape(strings.Trim(line, "\r\n")))
+	fmt.Println(server.Name, arrow, ircfmt.Escape(strings.Trim(line, "\r\n")))
 }
 
 // Start opens and starts connecting to the server.
@@ -136,6 +192,7 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.ConnectionPass = sc.Password
 	server.FallbackNicks = append(server.FallbackNicks, sc.FbNickname)
 
+	server.RegisterEvent("in", "raw", sc.connectLinesHandler, 0)
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
 
