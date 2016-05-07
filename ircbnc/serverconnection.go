@@ -150,14 +150,13 @@ func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.Info
 		sc.connectMessages = append(sc.connectMessages, message)
 	}
 
-	if message.Command == "376" {
+	if message.Command == "376" || message.Command == "422" {
 		sc.storingConnectMessages = false
 	}
 }
 
 // DumpRegistration dumps the registration messages of this server to the given Listener.
 func (sc *ServerConnection) DumpRegistration(listener *Listener) {
-	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "We should be dumping the startup info from the serverconnection!")
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
 		listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
