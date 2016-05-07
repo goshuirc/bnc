@@ -23,14 +23,14 @@ type SocketReactor struct {
 }
 
 // NewSocketReactor returns a new SocketReactor.
-func NewSocketReactor(conn net.Conn, handle func(line string) bool) SocketReactor {
+func NewSocketReactor(conn net.Conn, pilHandle func(line string) bool) SocketReactor {
 	return SocketReactor{
 		receiveLines:  make(chan string),
 		ReceiveEvents: make(chan Message),
 		SendLines:     make(chan string),
 		socket:        NewSocket(conn),
 
-		processIncomingLine: handle,
+		processIncomingLine: pilHandle,
 	}
 }
 
