@@ -5,7 +5,6 @@ package ircbnc
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"net"
 	"strings"
@@ -13,7 +12,7 @@ import (
 
 // Socket represents an IRC socket.
 type Socket struct {
-	closed bool
+	Closed bool
 	conn   net.Conn
 	reader *bufio.Reader
 	buffer string
@@ -29,16 +28,16 @@ func NewSocket(conn net.Conn) Socket {
 
 // Close stops a Socket from being able to send/receive any more data.
 func (socket *Socket) Close() {
-	if socket.closed {
+	if socket.Closed {
 		return
 	}
-	socket.closed = true
+	socket.Closed = true
 	socket.conn.Close()
 }
 
 // Read returns a single IRC line from a Socket.
 func (socket *Socket) Read() (string, error) {
-	if socket.closed {
+	if socket.Closed {
 		return "", io.EOF
 	}
 
@@ -63,12 +62,12 @@ func (socket *Socket) Read() (string, error) {
 
 // Write sends the given line out of Socket.
 func (socket *Socket) Write(line string) error {
-	if socket.closed {
+	if socket.Closed {
 		return io.EOF
 	}
 
 	// write data
-	_, err := fmt.Fprintf(socket.conn, line)
+	_, err := socket.conn.Write([]byte(line))
 	if err != nil {
 		socket.Close()
 		return err
