@@ -37,6 +37,7 @@ type ServerConnection struct {
 
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
+	currentServer          *gircclient.ServerConnection
 	Listeners              []Listener
 
 	Password  string
@@ -46,6 +47,7 @@ type ServerConnection struct {
 // LoadServerConnection loads the given server connection from our database.
 func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection, error) {
 	var sc ServerConnection
+	sc.storingConnectMessages = true
 	sc.Name = name
 	sc.User = user
 
@@ -132,6 +134,15 @@ var storedConnectLines = map[string]bool{
 	"422": true,
 }
 
+// disconnectHandler extracts and stores .
+func (sc *ServerConnection) disconnectHandler(event string, info eventmgr.InfoMap) {
+	sc.currentServer = nil
+
+	for _, listener := range sc.Listeners {
+		listener.Send(nil, listener.Bouncer.StatusSource, "PRIVMSG", "Disconnected from server")
+	}
+}
+
 // connectLinesHandler extracts and stores the connection lines.
 func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.InfoMap) {
 	if !sc.storingConnectMessages {
@@ -157,10 +168,23 @@ func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.Info
 
 // DumpRegistration dumps the registration messages of this server to the given Listener.
 func (sc *ServerConnection) DumpRegistration(listener *Listener) {
+	// if server is not currently connected, just dump a nil connect
+	if sc.currentServer == nil {
+		listener.SendNilConnect()
+		return
+	}
+
+	// change nick if user has a different one set
+	//TODO(dan): If nick if diff. we may want to dump a NICK message, but maybe not.
+	// If clients get nick from 001, it'll be fine.
+	listener.ClientNick = sc.currentServer.Nick
+
+	// dump reg
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
 		listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
 	}
+
 }
 
 // rawHandler prints raw messages to and from the server.
@@ -184,6 +208,7 @@ func rawHandler(event string, info eventmgr.InfoMap) {
 func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	name := fmt.Sprintf("%s %s", sc.User.ID, sc.Name)
 	server := reactor.CreateServer(name)
+	sc.currentServer = server
 
 	server.InitialNick = sc.Nickname
 	server.InitialUser = sc.Username
@@ -192,6 +217,7 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.FallbackNicks = append(server.FallbackNicks, sc.FbNickname)
 
 	server.RegisterEvent("in", "raw", sc.connectLinesHandler, 0)
+	server.RegisterEvent("out", "server disconnected", sc.disconnectHandler, 0)
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
 
