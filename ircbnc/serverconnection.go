@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"database/sql"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -231,6 +232,7 @@ func (sc *ServerConnection) lineReceiveLoop(server *gircclient.ServerConnection)
 
 // ReceiveLoop runs a loop of receiving and dispatching new messages.
 func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
+	var msg Message
 	var line *string
 	for {
 		select {
@@ -239,8 +241,24 @@ func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
 				break
 			}
 			server.ProcessIncomingLine(*line)
+		case msg = <-sc.ReceiveEvents:
+			if msg.Type == AddListenerMT {
+				listener := msg.Info[ListenerIK].(*Listener)
+				sc.Listeners = append(sc.Listeners, *listener)
+				listener.ServerConnection = sc
+			} else {
+				log.Fatal("Got an event I cannot parse")
+				fmt.Println(msg)
+			}
 		}
 	}
+}
+
+// AddListener adds the given listener to this ServerConnection.
+func (sc *ServerConnection) AddListener(listener *Listener) {
+	message := NewMessage(AddListenerMT, NoMV)
+	message.Info[ListenerIK] = listener
+	sc.ReceiveEvents <- message
 }
 
 // Start opens and starts connecting to the server.

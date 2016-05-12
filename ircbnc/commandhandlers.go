@@ -75,7 +75,7 @@ func passHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 		listener.User = user
 		network, netExists := user.Networks[networkID]
 		if netExists {
-			listener.ServerConnection = network
+			network.AddListener(listener)
 		}
 		return false
 	}
