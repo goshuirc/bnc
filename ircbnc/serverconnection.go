@@ -4,6 +4,7 @@
 package ircbnc
 
 import (
+	"bufio"
 	"database/sql"
 	"fmt"
 	"net"
@@ -35,6 +36,9 @@ type ServerConnection struct {
 	Realname   string
 	Channels   map[string]string
 
+	receiveLines  chan *string
+	ReceiveEvents chan Message
+
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
 	currentServer          *gircclient.ServerConnection
@@ -48,6 +52,8 @@ type ServerConnection struct {
 func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection, error) {
 	var sc ServerConnection
 	sc.storingConnectMessages = true
+	sc.receiveLines = make(chan *string)
+	sc.ReceiveEvents = make(chan Message)
 	sc.Name = name
 	sc.User = user
 
@@ -204,6 +210,39 @@ func rawHandler(event string, info eventmgr.InfoMap) {
 	fmt.Println(server.Name, arrow, ircfmt.Escape(strings.Trim(line, "\r\n")))
 }
 
+func (sc *ServerConnection) lineReceiveLoop(server *gircclient.ServerConnection) {
+	// wait for the connection to become available
+	server.WaitForConnection()
+
+	reader := bufio.NewReader(server.RawConnection)
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			sc.receiveLines <- nil
+			break
+		}
+
+		sc.receiveLines <- &line
+	}
+
+	server.Disconnect()
+}
+
+// ReceiveLoop runs a loop of receiving and dispatching new messages.
+func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
+	var line *string
+	for {
+		select {
+		case line = <-sc.receiveLines:
+			if line == nil {
+				break
+			}
+			server.ProcessIncomingLine(*line)
+		}
+	}
+}
+
 // Start opens and starts connecting to the server.
 func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	name := fmt.Sprintf("%s %s", sc.User.ID, sc.Name)
@@ -236,5 +275,6 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 		return
 	}
 
-	go server.ReceiveLoop()
+	go sc.lineReceiveLoop(server)
+	go sc.ReceiveLoop(server)
 }
