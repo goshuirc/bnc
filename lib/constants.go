@@ -21,5 +21,5 @@ func Version() (ver string) {
 	for _, num := range VersionSplit {
 		versionSplitString = append(versionSplitString, strconv.Itoa(num))
 	}
-	return fmt.Sprintf("gIRCbnc %s %s", strings.Join(versionSplitString, "."), VersionType)
+	return fmt.Sprintf("GoshuBNC %s %s", strings.Join(versionSplitString, "."), VersionType)
 }

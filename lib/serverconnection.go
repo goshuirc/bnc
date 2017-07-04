@@ -12,10 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/DanielOaks/girc-go/client"
-	"github.com/DanielOaks/girc-go/eventmgr"
-	"github.com/DanielOaks/girc-go/ircfmt"
-	"github.com/DanielOaks/girc-go/ircmsg"
+	"github.com/goshuirc/irc-go/client"
+	"github.com/goshuirc/irc-go/eventmgr"
+	"github.com/goshuirc/irc-go/ircfmt"
+	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 // ServerConnectionAddress represents an address a ServerConnection can join.

@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/DanielOaks/girc-go/ircmsg"
+	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 // Listener is a listener for a client connected directly to us.
@@ -46,7 +46,7 @@ func NewListener(b *Bouncer, conn net.Conn) {
 
 // SendNilConnect sends a connection init (001+ERR_NOMOTD) to the listener when they are not connected to a server.
 func (listener *Listener) SendNilConnect() {
-	listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to gIRCbnc -")
+	listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to GoshuBNC -")
 	listener.Send(nil, listener.Source, "422", listener.ClientNick, "MOTD File is missing")
 	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
 	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))

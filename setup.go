@@ -16,8 +16,8 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/DanielOaks/gircbnc/ircbnc"
 	"github.com/fatih/color"
+	"github.com/goshuirc/bnc/lib"
 )
 
 var (
@@ -103,9 +103,9 @@ func Error(text string) {
 	fmt.Println(cbBlue("["), cbRed("!!"), cbBlue("]"), cbRed(text))
 }
 
-// InitialSetup performs the initial gircbnc setup
+// InitialSetup performs the initial GoshuBNC setup
 func InitialSetup(db *sql.DB) {
-	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), "Welcome to", cbCyan("gIRCbnc"))
+	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), "Welcome to", cbCyan("GoshuBNC"))
 	Note("We will now run through basic setup.")
 
 	var err error
@@ -353,6 +353,6 @@ func InitialSetup(db *sql.DB) {
 		}
 	}
 
-	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), cbCyan("gIRCbnc"), "is now configured!")
-	Note("You can now launch gIRCbnc and connect to it with your IRC client")
+	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), cbCyan("GoshuBNC"), "is now configured!")
+	Note("You can now launch GoshuBNC and connect to it with your IRC client")
 }

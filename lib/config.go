@@ -31,7 +31,7 @@ func (conf *TLSListenConfig) Config() (*tls.Config, error) {
 	}, err
 }
 
-// Config defines a configuration file for gIRCbnc
+// Config defines a configuration file for GoshuBNC
 type Config struct {
 	Bouncer struct {
 		DatabasePath string `yaml:"database-path"`

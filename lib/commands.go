@@ -3,7 +3,7 @@
 
 package ircbnc
 
-import "github.com/DanielOaks/girc-go/ircmsg"
+import "github.com/goshuirc/irc-go/ircmsg"
 
 // Command represents a command accepted on a listener.
 type Command struct {

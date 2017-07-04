@@ -8,7 +8,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/DanielOaks/girc-go/ircmsg"
+	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 // SocketReactor listens to a socket using the IRC protocol, processes events,

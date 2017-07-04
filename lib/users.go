@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/DanielOaks/girc-go/client"
+	"github.com/goshuirc/irc-go/client"
 )
 
 // User represents an ircbnc user.

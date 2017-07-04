@@ -14,7 +14,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/DanielOaks/girc-go/client"
+	"github.com/goshuirc/irc-go/client"
 )
 
 var (
@@ -51,7 +51,7 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 	b.Users = make(map[string]*User)
 
 	// source on our outgoing message/status bot/etc
-	b.Source = "irc.gircbnc"
+	b.Source = "irc.goshubnc"
 	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
 
 	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "salt")
