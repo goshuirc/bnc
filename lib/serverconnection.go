@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goshuirc/eventmgr"
 	"github.com/goshuirc/irc-go/client"
-	"github.com/goshuirc/irc-go/eventmgr"
 	"github.com/goshuirc/irc-go/ircfmt"
 	"github.com/goshuirc/irc-go/ircmsg"
 )
