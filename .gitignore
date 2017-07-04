@@ -92,4 +92,5 @@ _testmain.go
 
 ### GoshuBNC ###
 /bnc.*
+!/bnc.go
 /tls.*

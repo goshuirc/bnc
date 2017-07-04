@@ -1,7 +1,7 @@
 // written by Daniel Oaks <daniel@danieloaks.net>
 // released under the ISC license
 
-package main
+package ircsetup
 
 import (
 	"bufio"
@@ -21,27 +21,27 @@ import (
 )
 
 var (
-	cbBlue   = color.New(color.Bold, color.FgHiBlue).SprintfFunc()
-	cbCyan   = color.New(color.Bold, color.FgHiCyan).SprintfFunc()
-	cbYellow = color.New(color.Bold, color.FgHiYellow).SprintfFunc()
-	cbRed    = color.New(color.Bold, color.FgHiRed).SprintfFunc()
+	CbBlue   = color.New(color.Bold, color.FgHiBlue).SprintfFunc()
+	CbCyan   = color.New(color.Bold, color.FgHiCyan).SprintfFunc()
+	CbYellow = color.New(color.Bold, color.FgHiYellow).SprintfFunc()
+	CbRed    = color.New(color.Bold, color.FgHiRed).SprintfFunc()
 )
 
 // Section displays a section to the user
 func Section(text string) {
 	Note("")
-	fmt.Println(cbBlue("["), cbYellow("**"), cbBlue("]"), "--", text, "--")
+	fmt.Println(CbBlue("["), CbYellow("**"), CbBlue("]"), "--", text, "--")
 	Note("")
 }
 
 // Note displays a note to the user
 func Note(text string) {
-	fmt.Println(cbBlue("["), cbYellow("**"), cbBlue("]"), text)
+	fmt.Println(CbBlue("["), CbYellow("**"), CbBlue("]"), text)
 }
 
 // Query asks for a value from the user
 func Query(prompt string) (string, error) {
-	fmt.Print(cbBlue("[ "), cbYellow("??"), cbBlue(" ] "), prompt)
+	fmt.Print(CbBlue("[ "), CbYellow("??"), CbBlue(" ] "), prompt)
 
 	in := bufio.NewReader(os.Stdin)
 	response, err := in.ReadString('\n')
@@ -50,7 +50,7 @@ func Query(prompt string) (string, error) {
 
 // QueryNoEcho asks for a value from the user without echoing what they type
 func QueryNoEcho(prompt string) (string, error) {
-	fmt.Print(cbBlue("[ "), cbYellow("??"), cbBlue(" ] "), prompt)
+	fmt.Print(CbBlue("[ "), CbYellow("??"), CbBlue(" ] "), prompt)
 
 	response, err := terminal.ReadPassword(int(syscall.Stdin))
 	fmt.Print("\n")
@@ -95,17 +95,17 @@ func QueryBool(prompt string) (bool, error) {
 
 // Warn warns the user about something
 func Warn(text string) {
-	fmt.Println(cbBlue("["), cbRed("**"), cbBlue("]"), text)
+	fmt.Println(CbBlue("["), CbRed("**"), CbBlue("]"), text)
 }
 
 // Error shows the user an error
 func Error(text string) {
-	fmt.Println(cbBlue("["), cbRed("!!"), cbBlue("]"), cbRed(text))
+	fmt.Println(CbBlue("["), CbRed("!!"), CbBlue("]"), CbRed(text))
 }
 
 // InitialSetup performs the initial GoshuBNC setup
 func InitialSetup(db *sql.DB) {
-	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), "Welcome to", cbCyan("GoshuBNC"))
+	fmt.Println(CbBlue("["), CbCyan("~~"), CbBlue("]"), "Welcome to", CbCyan("GoshuBNC"))
 	Note("We will now run through basic setup.")
 
 	var err error
@@ -353,6 +353,6 @@ func InitialSetup(db *sql.DB) {
 		}
 	}
 
-	fmt.Println(cbBlue("["), cbCyan("~~"), cbBlue("]"), cbCyan("GoshuBNC"), "is now configured!")
+	fmt.Println(CbBlue("["), CbCyan("~~"), CbBlue("]"), CbCyan("GoshuBNC"), "is now configured!")
 	Note("You can now launch GoshuBNC and connect to it with your IRC client")
 }
