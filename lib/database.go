@@ -1,105 +1,75 @@
-// This file is based on 'database.go' from Oragono/Ergonomadic
-// it is modified by Daniel Oaks <daniel@danieloaks.net>
-// covered by the MIT license in the LICENSE.ergonomadic file
+// Copyright (c) 2012-2014 Jeremy Latt
+// Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
+// released under the MIT license
 
 package ircbnc
 
 import (
-	"database/sql"
+	"encoding/base64"
+	"fmt"
 	"log"
 	"os"
 
-	// db drivers should be imported anonymously
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/tidwall/buntdb"
 )
 
-// LatestDbVersion is the latest version of the the database
-const LatestDbVersion = 1
+const (
+	// 'version' of the database schema
+	keySchemaVersion = "db.version"
+	// latest schema of the db
+	latestDbSchema = "1"
+	// key for the primary salt used by the ircd
+	keySalt = "crypto.salt"
+)
 
-// InitDB creates the new blank database
+// InitDB creates the database.
 func InitDB(path string) {
-	//TODO(dan): Warn before removing old db
+	// prepare kvstore db
+	//TODO(dan): fail if already exists instead? don't want to overwrite good data
 	os.Remove(path)
-	db := OpenDB(path)
-	defer db.Close()
-	_, err := db.Exec(`
-CREATE TABLE ircbnc (
-	key TEXT NOT NULL UNIQUE,
-	value TEXT
-);
-
-INSERT INTO ircbnc (key, value) VALUES ("db_version", ?);
-
-CREATE TABLE users (
-	id TEXT NOT NULL UNIQUE,
-	salt TEXT NOT NULL,
-	password TEXT NOT NULL,
-	default_nickname TEXT,
-	default_fallback_nickname TEXT,
-	default_username TEXT,
-	default_realname TEXT
-);
-
-CREATE TABLE user_permissions (
-	user_id TEXT NOT NULL,
-	permission TEXT NOT NULL,
-	FOREIGN KEY(user_id) REFERENCES users(id),
-	PRIMARY KEY(user_id, permission)
-);
-
-CREATE TABLE server_connections (
-	user_id TEXT NOT NULL,
-	name TEXT NOT NULL,
-	nickname TEXT DEFAULT "",
-	fallback_nickname TEXT DEFAULT "",
-	username TEXT DEFAULT "",
-	realname TEXT DEFAULT "",
-	password TEXT DEFAULT "",
-	FOREIGN KEY(user_id) REFERENCES users(id),
-	PRIMARY KEY(user_id, name)
-);
-
-CREATE TABLE server_connection_accepted_certs (
-	user_id TEXT NOT NULL,
-	sc_name TEXT NOT NULL,
-	cert TEXT NOT NULL,
-	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name)
-);
-
-CREATE TABLE server_connection_addresses (
-	user_id TEXT NOT NULL,
-	sc_name TEXT NOT NULL,
-	address TEXT NOT NULL,
-	port INTEGER,
-	use_tls BOOL,
-	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name)
-);
-
-CREATE TABLE server_connection_channels (
-	user_id TEXT NOT NULL,
-	sc_name TEXT NOT NULL,
-	name TEXT NOT NULL,
-	key TEXT DEFAULT "",
-	FOREIGN KEY(user_id, sc_name) REFERENCES server_connections(user_id, name),
-	PRIMARY KEY(user_id, sc_name, name)
-);`, LatestDbVersion)
+	store, err := buntdb.Open(path)
 	if err != nil {
-		log.Fatal("initdb error: ", err)
+		log.Fatal(fmt.Sprintf("Failed to open datastore: %s", err.Error()))
+	}
+	defer store.Close()
+
+	err = store.Update(func(tx *buntdb.Tx) error {
+		// set base db salt
+		salt, err := NewSalt()
+		encodedSalt := base64.StdEncoding.EncodeToString(salt)
+		if err != nil {
+			log.Fatal("Could not generate cryptographically-secure salt for the database:", err.Error())
+		}
+		tx.Set(keySalt, encodedSalt, nil)
+
+		// set schema version
+		tx.Set(keySchemaVersion, latestDbSchema, nil)
+		return nil
+	})
+
+	if err != nil {
+		log.Fatal("Could not save datastore:", err.Error())
 	}
 }
 
-// UpgradeDB upgrades the database to the latest version
+// UpgradeDB upgrades the datastore to the latest schema.
 func UpgradeDB(path string) {
-	//db := OpenDB(path)
-
-	//TODO(dan): Actually write upgrading code here
-}
-
-// OpenDB returns a database handle
-func OpenDB(path string) *sql.DB {
-	db, err := sql.Open("sqlite3", path)
+	store, err := buntdb.Open(path)
 	if err != nil {
-		log.Fatal("open db error: ", err)
+		log.Fatal(fmt.Sprintf("Failed to open datastore: %s", err.Error()))
 	}
-	return db
+	defer store.Close()
+
+	err = store.Update(func(tx *buntdb.Tx) error {
+		version, _ := tx.Get(keySchemaVersion)
+
+		// datastore upgrading code here
+
+		return nil
+	})
+	if err != nil {
+		log.Fatal("Could not update datastore:", err.Error())
+	}
+
+	return
 }

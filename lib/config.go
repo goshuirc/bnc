@@ -1,6 +1,7 @@
-// This file is based on 'config.go' from Oragono/Ergonomadic
-// it is modified by Daniel Oaks <daniel@danieloaks.net>
-// covered by the MIT license in the LICENSE.ergonomadic file
+// Copyright (c) 2012-2014 Jeremy Latt
+// Copyright (c) 2014-2015 Edmund Huber
+// Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
+// released under the MIT license
 
 package ircbnc
 
