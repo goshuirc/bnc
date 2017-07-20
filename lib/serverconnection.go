@@ -5,7 +5,6 @@ package ircbnc
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"log"
 	"net"
@@ -16,14 +15,8 @@ import (
 	"github.com/goshuirc/irc-go/client"
 	"github.com/goshuirc/irc-go/ircfmt"
 	"github.com/goshuirc/irc-go/ircmsg"
+	"github.com/tidwall/buntdb"
 )
-
-// ServerConnectionAddress represents an address a ServerConnection can join.
-type ServerConnectionAddress struct {
-	Address string
-	Port    int
-	UseTLS  bool
-}
 
 // ServerConnection represents a connection to an IRC server.
 type ServerConnection struct {
@@ -50,7 +43,7 @@ type ServerConnection struct {
 }
 
 // LoadServerConnection loads the given server connection from our database.
-func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection, error) {
+func LoadServerConnection(name string, user User, db *buntdb.DB) (*ServerConnection, error) {
 	var sc ServerConnection
 	sc.storingConnectMessages = true
 	sc.receiveLines = make(chan *string)
@@ -122,23 +115,24 @@ func LoadServerConnection(name string, user User, db *sql.DB) (*ServerConnection
 	return &sc, nil
 }
 
+//TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{
-	"001": true,
-	"002": true,
-	"003": true,
-	"004": true,
-	"005": true,
-	"250": true,
-	"251": true,
-	"252": true,
-	"254": true,
-	"255": true,
-	"265": true,
-	"266": true,
-	"372": true,
-	"375": true,
-	"376": true,
-	"422": true,
+	RPL_WELCOME:       true,
+	RPL_YOURHOST:      true,
+	RPL_CREATED:       true,
+	RPL_MYINFO:        true,
+	RPL_ISUPPORT:      true,
+	"250":             true,
+	RPL_LUSERCLIENT:   true,
+	RPL_LUSEROP:       true,
+	RPL_LUSERCHANNELS: true,
+	RPL_LUSERME:       true,
+	"265":             true,
+	"266":             true,
+	RPL_MOTD:          true,
+	RPL_MOTDSTART:     true,
+	RPL_ENDOFMOTD:     true,
+	ERR_NOMOTD:        true,
 }
 
 // disconnectHandler extracts and stores .

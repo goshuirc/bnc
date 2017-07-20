@@ -7,7 +7,6 @@ package ircbnc
 
 import (
 	"crypto/tls"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -16,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/goshuirc/irc-go/client"
+	"github.com/tidwall/buntdb"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 // Bouncer represents an IRC bouncer.
 type Bouncer struct {
 	Config *Config
-	DB     *sql.DB
+	DB     *buntdb.DB
 
 	Users     map[string]*User
 	Listeners []net.Listener
@@ -41,7 +41,7 @@ type Bouncer struct {
 }
 
 // NewBouncer create a new IRC bouncer from the given config and ircbnc database.
-func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
+func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
 	var b Bouncer
 	b.Config = config
 	b.DB = db
@@ -55,7 +55,7 @@ func NewBouncer(config *Config, db *sql.DB) (*Bouncer, error) {
 	b.Source = "irc.goshubnc"
 	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
 
-	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "salt")
+	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "crypto.salt")
 	var saltString string
 	err := saltRow.Scan(&saltString)
 	if err != nil {

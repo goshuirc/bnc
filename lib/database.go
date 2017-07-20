@@ -20,7 +20,56 @@ const (
 	latestDbSchema = "1"
 	// key for the primary salt used by the ircd
 	keySalt = "crypto.salt"
+
+	// KeyUserInfo stores the general info of a specific user in our database
+	KeyUserInfo = "user.info %s"
+	// KeyUserPermissions stores the permissions that the given user has access to
+	KeyUserPermissions = "user.permissions %s"
+
+	KeyServerConnectionInfo      = "user.server.info %s %s"
+	KeyServerConnectionAddresses = "user.server.addresses %s %s"
+	KeyServerConnectionChannels  = "user.server.channels %s %s"
 )
+
+// these are types used to store information in / retrieve information from the database
+
+// UserInfo stores information about the user in our database
+type UserInfo struct {
+	ID                  string
+	Role                string
+	EncodedSalt         string `json:"salt"`
+	PasswordHash        string `json:"hash"`
+	DefaultNick         string `json:"default-nick"`
+	DefaultNickFallback string `json:"default-nick-fallback"`
+	DefaultUsername     string `json:"default-username"`
+	DefaultRealname     string `json:"default-realname"`
+}
+
+// UserPermissions is a list of permissions the user has access to
+type UserPermissions []string
+
+// ServerConnectionInfo stores info about a user's specific server connection
+type ServerConnectionInfo struct {
+	Enabled        string
+	ServerPassword string `json:"connect-password"`
+}
+
+type ServerConnectionAddress struct {
+	Host      string
+	Port      int
+	UseTLS    bool `json:"use-tls"`
+	VerifyTLS bool `json:"verify-tls"`
+}
+
+type ServerConnectionAddresses []ServerConnectionAddress
+
+type ServerConnectionChannel struct {
+	Name   string
+	Key    string
+	UseKey bool `json:"use-key`
+}
+
+type ServerConnectionChannels []ServerConnectionChannel
 
 // InitDB creates the database.
 func InitDB(path string) {

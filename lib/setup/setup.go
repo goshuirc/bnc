@@ -5,7 +5,6 @@ package ircsetup
 
 import (
 	"bufio"
-	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -16,8 +15,11 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
+	"encoding/json"
+
 	"github.com/fatih/color"
 	"github.com/goshuirc/bnc/lib"
+	"github.com/tidwall/buntdb"
 )
 
 var (
@@ -104,19 +106,11 @@ func Error(text string) {
 }
 
 // InitialSetup performs the initial GoshuBNC setup
-func InitialSetup(db *sql.DB) {
+func InitialSetup(db *buntdb.DB) {
 	fmt.Println(CbBlue("["), CbCyan("~~"), CbBlue("]"), "Welcome to", CbCyan("GoshuBNC"))
 	Note("We will now run through basic setup.")
 
 	var err error
-
-	// generate the password salt used by the bouncer
-	bncSalt, err := ircbnc.NewSalt()
-	if err != nil {
-		log.Fatal("Could not generate cryptographically-secure salt for the bouncer:", err.Error())
-	}
-
-	db.Exec(`INSERT INTO ircbnc (key, value) VALUES ("salt",?)`, base64.StdEncoding.EncodeToString(bncSalt))
 
 	Section("Admin user settings")
 	var username string
@@ -229,11 +223,41 @@ func InitialSetup(db *sql.DB) {
 		log.Fatal(err.Error())
 	}
 
-	db.Exec(`INSERT INTO users (id, salt, password, default_nickname, default_fallback_nickname, default_username, default_realname) VALUES (?,?,?,?,?,?,?)`,
-		goodUsername, encodedUserSalt, passHash, ircNick, ircFbNick, ircUser, ircReal)
-	//NOTE(dan) first user is automatically a root admin -- they can do anything
-	db.Exec(`INSERT INTO user_permissions (user_id, permission) VALUE (?,?)`,
-		goodUsername, "*")
+	err = db.Update(func(tx *buntdb.Tx) error {
+		// store user info
+		ui := lib.UserInfo{
+			ID:                  goodUsername,
+			Role:                "Owner",
+			EncodedSalt:         encodedUserSalt,
+			PasswordHash:        passHash,
+			DefaultNick:         ircNick,
+			DefaultNickFallback: ircFbNick,
+			DefaultUsername:     ircUser,
+			DefaultRealname:     ircReal,
+		}
+		uiBytes, err := json.Marshal(ui)
+		if err != nil {
+			return fmt.Errorf("Error marshalling user info: %s", err.Error())
+		}
+		uiString := string(uiBytes) //TODO(dan): Should we do this in a safer way?
+
+		tx.Set(fmt.Sprintf(lib.KeyUserInfo, goodUsername), uiString)
+
+		// store user permissions
+		up := lib.UserPermissions{"*"}
+		upBytes, err := json.Marshal(up)
+		if err != nil {
+			return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+		}
+		upString := string(upBytes) //TODO(dan): Should we do this in a safer way?
+
+		tx.Set(fmt.Sprintf(lib.KeyUserPermissions, goodUsername), upString)
+	})
+
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Could not create user info in database: %s", err.Error()))
+		return
+	}
 
 	// now setup default networks for that user
 	Section("Network Setup")
@@ -343,13 +367,51 @@ func InitialSetup(db *sql.DB) {
 			break
 		}
 
-		db.Exec(`INSERT INTO server_connections (user_id, name, password) VALUES (?,?,?)`,
-			goodUsername, goodNetName, serverPass)
-		db.Exec(`INSERT INTO server_connection_addresses (user_id, sc_name, address, port, use_tls) VALUES (?,?,?,?,?)`,
-			goodUsername, goodNetName, serverAddress, serverPort, serverUseTLS)
-		for _, channel := range serverChannels {
-			db.Exec(`INSERT INTO server_connection_channels (user_id, sc_name, name) VALUES (?,?,?)`,
-				goodUsername, goodNetName, channel)
+		err = db.Update(func(tx *buntdb.Tx) error {
+			// store server info
+			sc := lib.ServerConnectionInfo{
+				Enabled:        bool,
+				ServerPassword: serverPass,
+			}
+			scBytes, err := json.Marshal(sc)
+			if err != nil {
+				return fmt.Errorf("Error marshalling user info: %s", err.Error())
+			}
+			scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
+
+			tx.Set(fmt.Sprintf(lib.KeyServerConnectionInfo, goodUsername, goodNetName), scString)
+
+			// store server addresses
+			sa := lib.ServerConnectionAddresses{
+				lib.ServerConnectionAddress{
+					Host:      serverAddress,
+					Port:      serverPort,
+					UseTLS:    serverUseTLS,
+					VerifyTLS: serverVerifyTLS,
+				},
+			}
+			saBytes, err := json.Marshal(sa)
+			if err != nil {
+				return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+			}
+			saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
+
+			tx.Set(fmt.Sprintf(lib.KeyServerConnectionAddresses, goodUsername, goodNetName), saString)
+
+			// store server channels
+			sc := lib.ServerConnectionChannels(serverChannels)
+			scBytes, err := json.Marshal(sc)
+			if err != nil {
+				return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+			}
+			scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
+
+			tx.Set(fmt.Sprintf(lib.KeyServerConnectionChannels, goodUsername, goodNetName), scString)
+		})
+
+		if err != nil {
+			log.Fatal(fmt.Sprintf("Could not create server connection [%s] in database: %s", goodNetName, err.Error()))
+			return
 		}
 	}
 

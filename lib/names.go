@@ -8,14 +8,14 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/DanielOaks/go-idn/idna2003/stringprep"
+	"golang.org/x/text/secure/precis"
 )
 
 var (
-	errNameBadChar = errors.New("Name contained a disallowed character.")
-	errNameDigit   = errors.New("The first character of a name cannot be a digit.")
-	errNameSpace   = errors.New("Names cannot contain whitespace.")
-	errNameNil     = errors.New("Names need to be at least one character long.")
+	errNameBadChar = errors.New("Name contained a disallowed character")
+	errNameDigit   = errors.New("The first character of a name cannot be a digit")
+	errNameSpace   = errors.New("Names cannot contain whitespace")
+	errNameNil     = errors.New("Names need to be at least one character long")
 )
 
 // IrcName returns a name appropriate for IRC use (nick/user/channel), or an error if the name is bad.
@@ -33,18 +33,14 @@ func IrcName(name string, isChannel bool) (string, error) {
 		}
 		// exclude other characters that mess with the protocol
 		if isChannel {
-			if strings.Contains(",", string(char)) {
+			if strings.Contains(",?*", string(char)) {
 				return "", errNameBadChar
 			}
 		} else {
-			if strings.Contains(",.!@#", string(char)) {
+			if strings.Contains(",.!@#?*", string(char)) {
 				return "", errNameBadChar
 			}
 		}
-	}
-
-	if strings.Contains("0123456789", string(name[0])) {
-		return "", errNameDigit
 	}
 
 	return name, nil
@@ -53,7 +49,7 @@ func IrcName(name string, isChannel bool) (string, error) {
 // BncName takes the given name and returns a casefolded name appropriate for use with ircbnc.
 // This includes usernames, network names, etc.
 func BncName(name string) (string, error) {
-	name, err := stringprep.Nameprep(strings.TrimSpace(name))
+	name, err := precis.UsernameCaseMapped.CompareKey(name)
 
 	if len(name) < 1 {
 		return "", errNameNil
