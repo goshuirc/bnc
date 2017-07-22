@@ -8,6 +8,8 @@ import (
 	"net"
 	"time"
 
+	"log"
+
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
@@ -62,6 +64,11 @@ func (listener *Listener) DumpRegistration() {
 	}
 }
 
+// DumpChannels dumps the active channels to the listener.
+func (listener *Listener) DumpChannels() {
+	listener.ServerConnection.DumpChannels(listener)
+}
+
 // processIncomingLine splits and handles the given command line.
 // Returns true if client is exiting (sent a QUIT command, etc).
 func (listener *Listener) processIncomingLine(line string) bool {
@@ -76,8 +83,23 @@ func (listener *Listener) processIncomingLine(line string) bool {
 	if canBeParsed {
 		return command.Run(listener, msg)
 	}
+
+	if listener.Registered {
+		err := listener.ServerConnection.currentServer.Send(&msg.Tags, msg.Prefix, msg.Command, msg.Params...)
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}
+
+	return false
+
 	//TODO(dan): This is an error+disconnect purely for reasons of testing.
 	// Later it may be downgraded to not-that-bad.
-	listener.Send(nil, "", "ERROR", fmt.Sprintf("Your client sent a command that could not be parsed [%s]", msg.Command))
-	return true
+	// listener.Send(nil, "", "ERROR", fmt.Sprintf("Your client sent a command that could not be parsed [%s]", msg.Command))
+	// return true
+}
+
+// SendLine sends a raw string line to the listener
+func (listener *Listener) SendLine(line string) {
+	listener.SocketReactor.SendLines <- line + "\n"
 }

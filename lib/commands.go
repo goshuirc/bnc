@@ -35,6 +35,8 @@ func (cmd *Command) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 		}
 		if isRegistered {
 			listener.DumpRegistration()
+			listener.Registered = true
+			listener.DumpChannels()
 		}
 	}
 
@@ -62,5 +64,15 @@ var Commands = map[string]Command{
 		handler:      capHandler,
 		usablePreReg: true,
 		minParams:    1,
+	},
+	"PING": Command{
+		handler:      pingHandler,
+		usablePreReg: true,
+		minParams:    1,
+	},
+	"QUIT": Command{
+		handler:      quitHandler,
+		usablePreReg: true,
+		minParams:    0,
 	},
 }

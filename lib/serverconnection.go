@@ -43,7 +43,7 @@ type ServerConnection struct {
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
 	currentServer          *gircclient.ServerConnection
-	Listeners              []Listener
+	Listeners              []*Listener
 
 	Password  string
 	Addresses []ServerConnectionAddress
@@ -150,6 +150,16 @@ func (sc *ServerConnection) disconnectHandler(event string, info eventmgr.InfoMa
 	}
 }
 
+func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) {
+	line := info["data"].(string)
+
+	for _, listener := range sc.Listeners {
+		if listener.Registered {
+			listener.SendLine(line)
+		}
+	}
+}
+
 // connectLinesHandler extracts and stores the connection lines.
 func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.InfoMap) {
 	if !sc.storingConnectMessages {
@@ -181,17 +191,23 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 		return
 	}
 
-	// change nick if user has a different one set
-	//TODO(dan): If nick if diff. we may want to dump a NICK message, but maybe not.
-	// If clients get nick from 001, it'll be fine.
-	listener.ClientNick = sc.currentServer.Nick
-
 	// dump reg
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
 		listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
 	}
 
+	// change nick if user has a different one set
+	if listener.ClientNick != sc.currentServer.Nick {
+		listener.Send(nil, listener.ClientNick, "NICK", sc.currentServer.Nick)
+		listener.ClientNick = sc.currentServer.Nick
+	}
+}
+
+func (sc *ServerConnection) DumpChannels(listener *Listener) {
+	for channel, _ := range sc.Channels {
+		listener.Send(nil, sc.currentServer.Nick, "JOIN", channel)
+	}
 }
 
 // rawHandler prints raw messages to and from the server.
@@ -244,7 +260,7 @@ func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
 		case msg = <-sc.ReceiveEvents:
 			if msg.Type == AddListenerMT {
 				listener := msg.Info[ListenerIK].(*Listener)
-				sc.Listeners = append(sc.Listeners, *listener)
+				sc.Listeners = append(sc.Listeners, listener)
 				listener.ServerConnection = sc
 			} else {
 				log.Fatal("Got an event I cannot parse")
@@ -274,7 +290,9 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.FallbackNicks = append(server.FallbackNicks, sc.FbNickname)
 
 	server.RegisterEvent("in", "raw", sc.connectLinesHandler, 0)
+	server.RegisterEvent("in", "raw", sc.rawToListeners, 0)
 	server.RegisterEvent("out", "server disconnected", sc.disconnectHandler, 0)
+	server.RegisterEvent("in", "JOIN", sc.handleJoin, 0)
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
 
@@ -295,4 +313,10 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 
 	go sc.lineReceiveLoop(server)
 	go sc.ReceiveLoop(server)
+}
+
+func (sc *ServerConnection) handleJoin(event string, info eventmgr.InfoMap) {
+	params := info["params"].([]string)
+	log.Println("adding channel", params[0])
+	sc.Channels[params[0]] = ""
 }
