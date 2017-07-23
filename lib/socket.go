@@ -1,3 +1,4 @@
+// Copyright (c) 2012-2014 Jeremy Latt
 // Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
 // released under the MIT license
 
@@ -5,39 +6,94 @@ package ircbnc
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"crypto/tls"
+	"encoding/hex"
+	"errors"
 	"io"
 	"net"
 	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	errNotTLS           = errors.New("Not a TLS connection")
+	errNoPeerCerts      = errors.New("Peer did not provide a certificate")
+	handshakeTimeout, _ = time.ParseDuration("5s")
 )
 
 // Socket represents an IRC socket.
 type Socket struct {
-	Closed bool
 	conn   net.Conn
 	reader *bufio.Reader
-	buffer string
+
+	MaxSendQBytes uint64
+
+	closed      bool
+	closedMutex sync.Mutex
+
+	finalData      string // what to send when we die
+	finalDataMutex sync.Mutex
+
+	lineToSendExists chan bool
+	linesToSend      []string
+	linesToSendMutex sync.Mutex
 }
 
 // NewSocket returns a new Socket.
-func NewSocket(conn net.Conn) Socket {
+func NewSocket(conn net.Conn, maxSendQBytes uint64) Socket {
 	return Socket{
-		conn:   conn,
-		reader: bufio.NewReader(conn),
+		conn:             conn,
+		reader:           bufio.NewReader(conn),
+		MaxSendQBytes:    maxSendQBytes,
+		lineToSendExists: make(chan bool),
 	}
 }
 
 // Close stops a Socket from being able to send/receive any more data.
 func (socket *Socket) Close() {
-	if socket.Closed {
+	socket.closedMutex.Lock()
+	defer socket.closedMutex.Unlock()
+	if socket.closed {
 		return
 	}
-	socket.Closed = true
-	socket.conn.Close()
+	socket.closed = true
+
+	// force close loop to happen if it hasn't already
+	go socket.timedFillLineToSendExists(200 * time.Millisecond)
+}
+
+// CertFP returns the fingerprint of the certificate provided by our peer.
+func (socket *Socket) CertFP() (string, error) {
+	var tlsConn, isTLS = socket.conn.(*tls.Conn)
+	if !isTLS {
+		return "", errNotTLS
+	}
+
+	// ensure handehake is performed, and timeout after a few seconds
+	tlsConn.SetDeadline(time.Now().Add(handshakeTimeout))
+	err := tlsConn.Handshake()
+	tlsConn.SetDeadline(time.Time{})
+
+	if err != nil {
+		return "", err
+	}
+
+	peerCerts := tlsConn.ConnectionState().PeerCertificates
+	if len(peerCerts) < 1 {
+		return "", errNoPeerCerts
+	}
+
+	rawCert := sha256.Sum256(peerCerts[0].Raw)
+	fingerprint := hex.EncodeToString(rawCert[:])
+
+	return fingerprint, nil
 }
 
 // Read returns a single IRC line from a Socket.
 func (socket *Socket) Read() (string, error) {
-	if socket.Closed {
+	if socket.IsClosed() {
 		return "", io.EOF
 	}
 
@@ -57,20 +113,128 @@ func (socket *Socket) Read() (string, error) {
 		return "", err
 	}
 
-	return line, nil
+	return strings.TrimRight(line, "\r\n"), nil
 }
 
-// Write sends the given line out of Socket.
-func (socket *Socket) Write(line string) error {
-	if socket.Closed {
+// Write sends the given string out of Socket.
+func (socket *Socket) Write(data string) error {
+	if socket.IsClosed() {
 		return io.EOF
 	}
 
-	// write data
-	_, err := socket.conn.Write([]byte(line))
-	if err != nil {
-		socket.Close()
-		return err
-	}
+	socket.linesToSendMutex.Lock()
+	socket.linesToSend = append(socket.linesToSend, data)
+	socket.linesToSendMutex.Unlock()
+
+	go socket.timedFillLineToSendExists(15 * time.Second)
+
 	return nil
+}
+
+// timedFillLineToSendExists either sends the note or times out.
+func (socket *Socket) timedFillLineToSendExists(duration time.Duration) {
+	lineToSendTimeout := time.NewTimer(duration)
+	defer lineToSendTimeout.Stop()
+	select {
+	case socket.lineToSendExists <- true:
+		// passed data successfully
+	case <-lineToSendTimeout.C:
+		// timed out send
+	}
+}
+
+// SetFinalData sets the final data to send when the SocketWriter closes.
+func (socket *Socket) SetFinalData(data string) {
+	socket.finalDataMutex.Lock()
+	socket.finalData = data
+	socket.finalDataMutex.Unlock()
+}
+
+// IsClosed returns whether the socket is closed.
+func (socket *Socket) IsClosed() bool {
+	socket.closedMutex.Lock()
+	defer socket.closedMutex.Unlock()
+	return socket.closed
+}
+
+// RunSocketWriter starts writing messages to the outgoing socket.
+func (socket *Socket) RunSocketWriter() {
+	for {
+		// wait for new lines
+		select {
+		case <-socket.lineToSendExists:
+			socket.linesToSendMutex.Lock()
+
+			// check if we're closed
+			if socket.IsClosed() {
+				socket.linesToSendMutex.Unlock()
+				break
+			}
+
+			// check whether new lines actually exist or not
+			if len(socket.linesToSend) < 1 {
+				socket.linesToSendMutex.Unlock()
+				continue
+			}
+
+			// check sendq
+			var sendQBytes uint64
+			for _, line := range socket.linesToSend {
+				sendQBytes += uint64(len(line))
+				if socket.MaxSendQBytes < sendQBytes {
+					// don't unlock mutex because this break is just to escape this for loop
+					break
+				}
+			}
+			if socket.MaxSendQBytes < sendQBytes {
+				socket.SetFinalData("\r\nERROR :SendQ Exceeded\r\n")
+				socket.linesToSendMutex.Unlock()
+				break
+			}
+
+			// get all existing data
+			data := strings.Join(socket.linesToSend, "")
+			socket.linesToSend = []string{}
+
+			socket.linesToSendMutex.Unlock()
+
+			// write data
+			if 0 < len(data) {
+				_, err := socket.conn.Write([]byte(data))
+				if err != nil {
+					break
+				}
+			}
+		}
+		if socket.IsClosed() {
+			// error out or we've been closed
+			break
+		}
+	}
+	// force closure of socket
+	socket.closedMutex.Lock()
+	if !socket.closed {
+		socket.closed = true
+	}
+	socket.closedMutex.Unlock()
+
+	// write error lines
+	socket.finalDataMutex.Lock()
+	if 0 < len(socket.finalData) {
+		socket.conn.Write([]byte(socket.finalData))
+	}
+	socket.finalDataMutex.Unlock()
+
+	// close the connection
+	socket.conn.Close()
+
+	// empty the lineToSendExists channel
+	for 0 < len(socket.lineToSendExists) {
+		<-socket.lineToSendExists
+	}
+}
+
+// WriteLine writes the given line out of Socket.
+func (socket *Socket) WriteLine(line string) error {
+	return socket.Write(line + "\r\n")
 }

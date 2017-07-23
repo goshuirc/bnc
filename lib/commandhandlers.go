@@ -81,6 +81,8 @@ func passHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 			network.AddListener(listener)
 		} else {
 			log.Println("Network doesnt exist")
+			listener.regLocks["LISTENER"] = true
+			listener.tryRegistration()
 		}
 		return false
 	}

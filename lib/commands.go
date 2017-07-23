@@ -3,7 +3,9 @@
 
 package ircbnc
 
-import "github.com/goshuirc/irc-go/ircmsg"
+import (
+	"github.com/goshuirc/irc-go/ircmsg"
+)
 
 // Command represents a command accepted on a listener.
 type Command struct {
@@ -26,18 +28,7 @@ func (cmd *Command) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 
 	// after each command, see if we can send registration to the listener
 	if !listener.Registered {
-		isRegistered := true
-		for _, fulfilled := range listener.regLocks {
-			if !fulfilled {
-				isRegistered = false
-				break
-			}
-		}
-		if isRegistered {
-			listener.DumpRegistration()
-			listener.Registered = true
-			listener.DumpChannels()
-		}
+		listener.tryRegistration()
 	}
 
 	return exiting

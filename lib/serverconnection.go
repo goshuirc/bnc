@@ -212,7 +212,8 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 }
 
 func (sc *ServerConnection) DumpChannels(listener *Listener) {
-	for channel, _ := range sc.Channels {
+	for channel := range sc.Channels {
+		//TODO(dan): add channel keys and enabled/disable bool here
 		listener.Send(nil, sc.currentServer.Nick, "JOIN", channel)
 	}
 }
@@ -261,7 +262,7 @@ func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
 		select {
 		case line = <-sc.receiveLines:
 			if line == nil {
-				break
+				continue
 			}
 			server.ProcessIncomingLine(*line)
 		case msg = <-sc.ReceiveEvents:
@@ -269,6 +270,10 @@ func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
 				listener := msg.Info[ListenerIK].(*Listener)
 				sc.Listeners = append(sc.Listeners, listener)
 				listener.ServerConnection = sc
+
+				// registration blocks on the listener being added, continue if we should
+				listener.regLocks["LISTENER"] = true
+				listener.tryRegistration()
 			} else {
 				log.Fatal("Got an event I cannot parse")
 				fmt.Println(msg)
