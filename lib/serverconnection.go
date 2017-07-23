@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"encoding/json"
+
 	"github.com/goshuirc/eventmgr"
 	"github.com/goshuirc/irc-go/client"
 	"github.com/goshuirc/irc-go/ircfmt"
@@ -43,7 +45,7 @@ type ServerConnection struct {
 }
 
 // LoadServerConnection loads the given server connection from our database.
-func LoadServerConnection(name string, user User, db *buntdb.DB) (*ServerConnection, error) {
+func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnection, error) {
 	var sc ServerConnection
 	sc.storingConnectMessages = true
 	sc.receiveLines = make(chan *string)
@@ -51,12 +53,23 @@ func LoadServerConnection(name string, user User, db *buntdb.DB) (*ServerConnect
 	sc.Name = name
 	sc.User = user
 
-	row := db.QueryRow(`SELECT nickname, fallback_nickname, username, realname, password FROM server_connections WHERE user_id = ? AND name = ?`,
-		user.ID, name)
-	err := row.Scan(&sc.Nickname, &sc.FbNickname, &sc.Username, &sc.Realname, &sc.Password)
+	// load general info
+	var scInfo ServerConnectionInfo
+	scInfoString, err := tx.Get(fmt.Sprintf(KeyServerConnectionInfo, user.ID, name))
 	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (loading sc details from db): %s", err.Error())
+		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc details from db): %s", err.Error())
 	}
+
+	err = json.Unmarshal([]byte(scInfoString), scInfo)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc details): %s", err.Error())
+	}
+
+	sc.Nickname = scInfo.Nickname
+	sc.FbNickname = scInfo.NicknameFallback
+	sc.Username = scInfo.Username
+	sc.Realname = scInfo.Realname
+	sc.Password = scInfo.ConnectPassword
 
 	// set default values
 	if sc.Nickname == "" {
@@ -73,43 +86,42 @@ func LoadServerConnection(name string, user User, db *buntdb.DB) (*ServerConnect
 	}
 
 	// load channels
-	sc.Channels = make(map[string]string)
-	rows, err := db.Query(`SELECT name, key FROM server_connection_channels WHERE user_id = ? AND sc_name = ?`,
-		user.ID, name)
+	scChannelString, err := tx.Get(fmt.Sprintf(KeyServerConnectionChannels, user.ID, name))
 	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (loading address details from db): %s", err.Error())
+		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc channels from db): %s", err.Error())
 	}
-	for rows.Next() {
-		var name, key string
-		rows.Scan(&name, &key)
 
-		sc.Channels[name] = key
+	var scChans ServerConnectionChannels
+	err = json.Unmarshal([]byte(scChannelString), scChans)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
+	}
+
+	sc.Channels = make(map[string]string)
+	for _, channel := range scChans {
+		//TODO(dan): Store channel key and whether to use key here too, etc etc
+		sc.Channels[channel.Name] = channel.Name
 	}
 
 	// load addresses
-	rows, err = db.Query(`SELECT address, port, use_tls FROM server_connection_addresses WHERE user_id = ? AND sc_name = ?`,
-		user.ID, name)
+	scAddressesString, err := tx.Get(fmt.Sprintf(KeyServerConnectionAddresses, user.ID, name))
 	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (loading address details from db): %s", err.Error())
+		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc addresses from db): %s", err.Error())
 	}
-	for rows.Next() {
-		var address, portString string
-		var useTLS bool
 
-		rows.Scan(&address, &portString, &useTLS)
+	var scAddresses ServerConnectionAddresses
+	err = json.Unmarshal([]byte(scAddressesString), scAddresses)
+	if err != nil {
+		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc addresses): %s", err.Error())
+	}
 
-		port, err := strconv.Atoi(portString)
-		if err != nil {
-			return nil, fmt.Errorf("Could not create new ServerConnection (port did not load correctly): %s", err.Error())
-		} else if port < 1 || port > 65535 {
-			return nil, fmt.Errorf("Could not create new ServerConnection (port %d is not valid)", port)
+	// check port number and add addresses
+	for _, address := range scAddresses {
+		if address.Port < 1 || address.Port > 65535 {
+			return nil, fmt.Errorf("Could not create new ServerConnection (port %d is not valid)", address.Port)
 		}
 
-		var newAddress ServerConnectionAddress
-		newAddress.Address = address
-		newAddress.Port = port
-		newAddress.UseTLS = useTLS
-		sc.Addresses = append(sc.Addresses, newAddress)
+		sc.Addresses = append(sc.Addresses, address)
 	}
 
 	return &sc, nil
@@ -274,7 +286,7 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 
 	var err error
 	for _, address := range sc.Addresses {
-		fullAddress := net.JoinHostPort(address.Address, strconv.Itoa(address.Port))
+		fullAddress := net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
 
 		err = server.Connect(fullAddress, address.UseTLS, nil)
 		if err == nil {

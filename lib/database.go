@@ -50,8 +50,12 @@ type UserPermissions []string
 
 // ServerConnectionInfo stores info about a user's specific server connection
 type ServerConnectionInfo struct {
-	Enabled        string
-	ServerPassword string `json:"connect-password"`
+	Enabled          string
+	ConnectPassword  string `json:"connect-password"`
+	Nickname         string
+	NicknameFallback string
+	Username         string
+	Realname         string
 }
 
 type ServerConnectionAddress struct {
@@ -113,6 +117,7 @@ func UpgradeDB(path string) {
 		version, _ := tx.Get(keySchemaVersion)
 
 		// datastore upgrading code here
+		fmt.Println("db version is", version, "but no upgrading code is written yet")
 
 		return nil
 	})

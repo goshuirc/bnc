@@ -370,8 +370,8 @@ func InitialSetup(db *buntdb.DB) {
 		err = db.Update(func(tx *buntdb.Tx) error {
 			// store server info
 			sc := lib.ServerConnectionInfo{
-				Enabled:        bool,
-				ServerPassword: serverPass,
+				Enabled:         bool,
+				ConnectPassword: serverPass,
 			}
 			scBytes, err := json.Marshal(sc)
 			if err != nil {

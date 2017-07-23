@@ -7,6 +7,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"encoding/json"
+
+	"strings"
+
 	"github.com/goshuirc/irc-go/client"
 	"github.com/tidwall/buntdb"
 )
@@ -41,36 +45,46 @@ func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, e
 
 	user.Networks = make(map[string]*ServerConnection)
 
-	userRow := db.QueryRow(`SELECT password, salt, default_nickname, default_fallback_nickname, default_username, default_realname FROM users WHERE id = ?`,
-		id)
-	var saltString string
-	err := userRow.Scan(&user.HashedPassword, &saltString, &user.DefaultNick, &user.DefaultFbNick, &user.DefaultUser, &user.DefaultReal)
+	// load user info
+	infoString, err := tx.Get(fmt.Sprintf(KeyUserInfo, id))
 	if err != nil {
-		return nil, fmt.Errorf("Could not load user (scanning user info from db): %s", err.Error())
+		return nil, fmt.Errorf("Could not load user (loading user info from db): %s", err.Error())
+	}
+	var ui *UserInfo
+	err = json.Unmarshal([]byte(infoString), ui)
+	if err != nil {
+		return nil, fmt.Errorf("Could not load user (unmarshalling user info from db): %s", err.Error())
 	}
 
-	user.Salt, err = base64.StdEncoding.DecodeString(saltString)
+	user.Salt, err = base64.StdEncoding.DecodeString(ui.EncodedSalt)
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (decoding salt): %s", err.Error())
 	}
 
-	rows, err := db.Query(`SELECT name FROM server_connections WHERE user_id = ?`, id)
-	if err != nil {
-		return nil, fmt.Errorf("Could not load user (loading sc names from db): %s", err.Error())
-	}
-	for rows.Next() {
-		var name string
-		err = rows.Scan(&name)
-		if err != nil {
-			return nil, fmt.Errorf("Could not load user (scanning sc names from db): %s", err.Error())
-		}
+	//TODO(dan): Make the below both have the same named fields
+	user.HashedPassword = []byte(ui.PasswordHash) //TODO(dan): make both these []byte
+	user.DefaultNick = ui.DefaultNick
+	user.DefaultFbNick = ui.DefaultNickFallback
+	user.DefaultUser = ui.DefaultUsername
+	user.DefaultReal = ui.DefaultRealname
 
-		sc, err := LoadServerConnection(name, user, user.DB)
+	// load server connections
+	var scError error
+	tx.DescendKeys(fmt.Sprintf("user.server.info %s *", user.ID), func(key, value string) bool {
+		name := strings.TrimPrefix(fmt.Sprintf("user.server.info %s ", user.ID), key)
+
+		sc, err := LoadServerConnection(name, user, tx)
 		if err != nil {
-			return nil, fmt.Errorf("Could not load user (loading sc): %s", err.Error())
+			scError = fmt.Errorf("Could not load user (loading sc): %s", err.Error())
+			return false
 		}
 
 		user.Networks[name] = sc
+
+		return true
+	})
+	if scError != nil {
+		return nil, scError
 	}
 
 	return &user, nil

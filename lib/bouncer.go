@@ -108,6 +108,9 @@ func (b *Bouncer) Run() error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	// open listeners and wait
 	for _, address := range b.Config.Bouncer.Listeners {
