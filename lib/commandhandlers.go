@@ -6,6 +6,8 @@ package ircbnc
 import (
 	"strings"
 
+	"log"
+
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
@@ -25,7 +27,8 @@ func nickHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 		return false
 	}
 	//TODO(dan): Handle NICK messages when connected to servers.
-	listener.Send(nil, "", "ERROR", "We're supposed to handle NICK changes here!")
+	//listener.Send(nil, "", "ERROR", "We're supposed to handle NICK changes here!")
+	listener.ServerConnection.Nickname = nick
 	return true
 }
 
@@ -76,6 +79,8 @@ func passHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 		network, netExists := user.Networks[networkID]
 		if netExists {
 			network.AddListener(listener)
+		} else {
+			log.Println("Network doesnt exist")
 		}
 		return false
 	}
@@ -87,5 +92,19 @@ func passHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 // capHandler handles the CAP command.
 func capHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 	//TODO(dan): Write CAP handling code.
+	return false
+}
+
+// pingHandler handles the PING command.
+// The BNC responds to pings from both the server and client as either
+// could be detached at any point.
+func pingHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
+	listener.Send(nil, "", "PONG", msg.Params[0])
+	return false
+}
+
+// quitHandler handles the QUIT command.
+func quitHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
+	// Just ignore it as clients usually send QUIT when the client is closed
 	return false
 }
