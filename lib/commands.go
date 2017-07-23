@@ -7,15 +7,23 @@ import (
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
-// Command represents a command accepted on a listener.
-type Command struct {
+// ClientCommands holds all commands executable by a client connected to a listener.
+var ClientCommands map[string]ClientCommand
+
+func init() {
+	ClientCommands = make(map[string]ClientCommand)
+	loadClientCommands()
+}
+
+// ClientCommand represents a command accepted on a listener.
+type ClientCommand struct {
 	handler      func(listener *Listener, msg ircmsg.IrcMessage) bool
 	usablePreReg bool
 	minParams    int
 }
 
 // Run runs this command with the given listener/message.
-func (cmd *Command) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
+func (cmd *ClientCommand) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 	if !listener.Registered && !cmd.usablePreReg {
 		// command silently ignored
 		return false
@@ -32,38 +40,4 @@ func (cmd *Command) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 	}
 
 	return exiting
-}
-
-// Commands holds all commands executable by a client connected to a listener.
-var Commands = map[string]Command{
-	"NICK": Command{
-		handler:      nickHandler,
-		usablePreReg: true,
-		minParams:    1,
-	},
-	"USER": Command{
-		handler:      userHandler,
-		usablePreReg: true,
-		minParams:    4,
-	},
-	"PASS": Command{
-		handler:      passHandler,
-		usablePreReg: true,
-		minParams:    1,
-	},
-	"CAP": Command{
-		handler:      capHandler,
-		usablePreReg: true,
-		minParams:    1,
-	},
-	"PING": Command{
-		handler:      pingHandler,
-		usablePreReg: true,
-		minParams:    1,
-	},
-	"QUIT": Command{
-		handler:      quitHandler,
-		usablePreReg: true,
-		minParams:    0,
-	},
 }
