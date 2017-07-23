@@ -50,7 +50,7 @@ type UserPermissions []string
 
 // ServerConnectionInfo stores info about a user's specific server connection
 type ServerConnectionInfo struct {
-	Enabled          string
+	Enabled          bool
 	ConnectPassword  string `json:"connect-password"`
 	Nickname         string
 	NicknameFallback string

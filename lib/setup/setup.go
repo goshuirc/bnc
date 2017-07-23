@@ -133,6 +133,7 @@ func InitialSetup(db *buntdb.DB) {
 	}
 
 	// generate our salts
+	bncSalt, err := ircbnc.NewSalt()
 	userSalt, err := ircbnc.NewSalt()
 	encodedUserSalt := base64.StdEncoding.EncodeToString(userSalt)
 	if err != nil {
@@ -225,11 +226,11 @@ func InitialSetup(db *buntdb.DB) {
 
 	err = db.Update(func(tx *buntdb.Tx) error {
 		// store user info
-		ui := lib.UserInfo{
+		ui := ircbnc.UserInfo{
 			ID:                  goodUsername,
 			Role:                "Owner",
 			EncodedSalt:         encodedUserSalt,
-			PasswordHash:        passHash,
+			PasswordHash:        string(passHash),
 			DefaultNick:         ircNick,
 			DefaultNickFallback: ircFbNick,
 			DefaultUsername:     ircUser,
@@ -241,17 +242,18 @@ func InitialSetup(db *buntdb.DB) {
 		}
 		uiString := string(uiBytes) //TODO(dan): Should we do this in a safer way?
 
-		tx.Set(fmt.Sprintf(lib.KeyUserInfo, goodUsername), uiString)
+		tx.Set(fmt.Sprintf(ircbnc.KeyUserInfo, goodUsername), uiString, nil)
 
 		// store user permissions
-		up := lib.UserPermissions{"*"}
+		up := ircbnc.UserPermissions{"*"}
 		upBytes, err := json.Marshal(up)
 		if err != nil {
 			return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
 		}
 		upString := string(upBytes) //TODO(dan): Should we do this in a safer way?
 
-		tx.Set(fmt.Sprintf(lib.KeyUserPermissions, goodUsername), upString)
+		tx.Set(fmt.Sprintf(ircbnc.KeyUserPermissions, goodUsername), upString, nil)
+		return nil
 	})
 
 	if err != nil {
@@ -308,6 +310,14 @@ func InitialSetup(db *buntdb.DB) {
 			log.Fatal(err.Error())
 		}
 
+		var serverVerifyTLS bool
+		if serverUseTLS {
+			serverVerifyTLS, err = QueryBool("Verify SSL/TLS certificates? (y/n) ")
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+		}
+
 		var defaultPort int
 		if serverUseTLS {
 			defaultPort = 6697
@@ -341,14 +351,12 @@ func InitialSetup(db *buntdb.DB) {
 			log.Fatal(err.Error())
 		}
 
-		var serverChannels []string
+		var serverChannels ircbnc.ServerConnectionChannels
 		for {
 			serverChannelsString, err := Query("Channels to autojoin (separated by spaces): ")
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-
-			serverChannels = make([]string, 0)
 
 			for _, channel := range strings.Fields(serverChannelsString) {
 				channel, err := ircbnc.IrcName(channel, true)
@@ -356,7 +364,9 @@ func InitialSetup(db *buntdb.DB) {
 					break
 				}
 
-				serverChannels = append(serverChannels, channel)
+				serverChannels = append(serverChannels, ircbnc.ServerConnectionChannel{
+					Name: channel,
+				})
 			}
 
 			if err != nil {
@@ -369,8 +379,8 @@ func InitialSetup(db *buntdb.DB) {
 
 		err = db.Update(func(tx *buntdb.Tx) error {
 			// store server info
-			sc := lib.ServerConnectionInfo{
-				Enabled:         bool,
+			sc := ircbnc.ServerConnectionInfo{
+				Enabled:         true,
 				ConnectPassword: serverPass,
 			}
 			scBytes, err := json.Marshal(sc)
@@ -379,11 +389,11 @@ func InitialSetup(db *buntdb.DB) {
 			}
 			scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
 
-			tx.Set(fmt.Sprintf(lib.KeyServerConnectionInfo, goodUsername, goodNetName), scString)
+			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionInfo, goodUsername, goodNetName), scString, nil)
 
 			// store server addresses
-			sa := lib.ServerConnectionAddresses{
-				lib.ServerConnectionAddress{
+			sa := ircbnc.ServerConnectionAddresses{
+				ircbnc.ServerConnectionAddress{
 					Host:      serverAddress,
 					Port:      serverPort,
 					UseTLS:    serverUseTLS,
@@ -396,17 +406,18 @@ func InitialSetup(db *buntdb.DB) {
 			}
 			saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
 
-			tx.Set(fmt.Sprintf(lib.KeyServerConnectionAddresses, goodUsername, goodNetName), saString)
+			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionAddresses, goodUsername, goodNetName), saString, nil)
 
 			// store server channels
-			sc := lib.ServerConnectionChannels(serverChannels)
-			scBytes, err := json.Marshal(sc)
+			scChannels := ircbnc.ServerConnectionChannels(serverChannels)
+			scChanBytes, err := json.Marshal(scChannels)
 			if err != nil {
 				return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
 			}
-			scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
+			scChanString := string(scChanBytes) //TODO(dan): Should we do this in a safer way?
 
-			tx.Set(fmt.Sprintf(lib.KeyServerConnectionChannels, goodUsername, goodNetName), scString)
+			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionChannels, goodUsername, goodNetName), scChanString, nil)
+			return nil
 		})
 
 		if err != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/bnc/lib/setup"
+	"github.com/tidwall/buntdb"
 )
 
 func main() {
@@ -28,7 +29,7 @@ Options:
 	-h --help          Show this screen.
 	--version          Show version.`
 
-	arguments, _ := docopt.Parse(usage, nil, true, ircbnc.Version(), false)
+	arguments, _ := docopt.Parse(usage, nil, true, ircbnc.SemVer, false)
 
 	configfile := arguments["--conf"].(string)
 	config, err := ircbnc.LoadConfig(configfile)
@@ -39,12 +40,18 @@ Options:
 	if arguments["initdb"].(bool) {
 		ircbnc.InitDB(config.Bouncer.DatabasePath)
 
-		db := ircbnc.OpenDB(config.Bouncer.DatabasePath)
+		db, err := buntdb.Open(config.Bouncer.DatabasePath)
+		if err != nil {
+			log.Fatal("Could not open DB:", err.Error())
+		}
 		ircsetup.InitialSetup(db)
 	} else if arguments["start"].(bool) {
 		fmt.Println("Starting", ircsetup.CbCyan("GoshuBNC"))
 
-		db := ircbnc.OpenDB(config.Bouncer.DatabasePath)
+		db, err := buntdb.Open(config.Bouncer.DatabasePath)
+		if err != nil {
+			log.Fatal("Could not open DB:", err.Error())
+		}
 		bouncer, err := ircbnc.NewBouncer(config, db)
 		if err != nil {
 			log.Fatal("Could not create bouncer:", err.Error())
