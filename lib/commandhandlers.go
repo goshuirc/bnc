@@ -66,13 +66,13 @@ func passHandler(listener *Listener, msg ircmsg.IrcMessage) bool {
 		userid = splitString[0]
 	}
 
-	user, valid := listener.Bouncer.Users[userid]
+	user, valid := listener.Manager.Users[userid]
 	if !valid {
 		listener.Send(nil, "", "ERROR", "Invalid username or password")
 		return true
 	}
 
-	loginError := CompareHashAndPassword(user.HashedPassword, listener.Bouncer.Salt, user.Salt, password)
+	loginError := CompareHashAndPassword(user.HashedPassword, listener.Manager.Salt, user.Salt, password)
 
 	if loginError == nil {
 		listener.User = user

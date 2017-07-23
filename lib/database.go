@@ -70,7 +70,7 @@ type ServerConnectionAddresses []ServerConnectionAddress
 type ServerConnectionChannel struct {
 	Name   string
 	Key    string
-	UseKey bool `json:"use-key`
+	UseKey bool `json:"use-key"`
 }
 
 type ServerConnectionChannels []ServerConnectionChannel

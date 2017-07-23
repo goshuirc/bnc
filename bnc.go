@@ -52,12 +52,12 @@ Options:
 		if err != nil {
 			log.Fatal("Could not open DB:", err.Error())
 		}
-		bouncer, err := ircbnc.NewBouncer(config, db)
+		manager, err := ircbnc.NewManager(config, db)
 		if err != nil {
-			log.Fatal("Could not create bouncer:", err.Error())
+			log.Fatal("Could not create manager:", err.Error())
 		}
 
-		err = bouncer.Run()
+		err = manager.Run()
 		if err != nil {
 			log.Fatal(err.Error())
 		}

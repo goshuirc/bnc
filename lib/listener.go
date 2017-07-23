@@ -19,7 +19,7 @@ import (
 type Listener struct {
 	Socket Socket
 
-	Bouncer     *Bouncer
+	Manager     *Manager
 	ConnectTime time.Time
 	ClientNick  string
 	Source      string
@@ -42,13 +42,13 @@ func (listener *Listener) RunSocketReader() {
 }
 
 // NewListener creates a new Listener.
-func NewListener(b *Bouncer, conn net.Conn) {
+func NewListener(m *Manager, conn net.Conn) {
 	now := time.Now()
 	listener := &Listener{
-		Bouncer:     b,
+		Manager:     m,
 		ClientNick:  "*",
 		ConnectTime: now,
-		Source:      b.Source,
+		Source:      m.Source,
 		regLocks: map[string]bool{
 			"CAP":  true,
 			"NICK": false,
@@ -95,8 +95,8 @@ func (listener *Listener) DumpRegistration() {
 func (listener *Listener) SendNilConnect() {
 	listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to GoshuBNC -")
 	listener.Send(nil, listener.Source, "422", listener.ClientNick, "MOTD File is missing")
-	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
-	listener.Send(nil, listener.Bouncer.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
+	listener.Send(nil, listener.Manager.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
+	listener.Send(nil, listener.Manager.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
 }
 
 // DumpChannels dumps the active channels to the listener.

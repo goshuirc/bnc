@@ -20,20 +20,21 @@ import (
 )
 
 var (
-	// ServerSignals is the list of signals we break on
-	ServerSignals = []os.Signal{syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT}
+	// QuitSignals is the list of signals we quit on
+	//TODO(dan): Rehash on one of these signals instead, same as Oragono.
+	QuitSignals = []os.Signal{syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT}
 )
 
-// Bouncer represents an IRC bouncer.
-type Bouncer struct {
+// Manager handles the different components that keep GoshuBNC spinning.
+type Manager struct {
 	Config *Config
 	DB     *buntdb.DB
 
 	Users     map[string]*User
 	Listeners []net.Listener
 
-	newConns chan net.Conn
-	signals  chan os.Signal
+	newConns    chan net.Conn
+	quitSignals chan os.Signal
 
 	Source       string
 	StatusSource string
@@ -41,20 +42,20 @@ type Bouncer struct {
 	Salt []byte
 }
 
-// NewBouncer create a new IRC bouncer from the given config and ircbnc database.
-func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
-	var b Bouncer
-	b.Config = config
-	b.DB = db
+// NewManager create a new IRC bouncer from the given config and database.
+func NewManager(config *Config, db *buntdb.DB) (*Manager, error) {
+	var m Manager
+	m.Config = config
+	m.DB = db
 
-	b.newConns = make(chan net.Conn)
-	b.signals = make(chan os.Signal, len(ServerSignals))
+	m.newConns = make(chan net.Conn)
+	m.quitSignals = make(chan os.Signal, len(QuitSignals))
 
-	b.Users = make(map[string]*User)
+	m.Users = make(map[string]*User)
 
 	// source on our outgoing message/status bot/etc
-	b.Source = "irc.goshubnc"
-	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
+	m.Source = "irc.goshubnc"
+	m.StatusSource = fmt.Sprintf("*status!bnc@%s", m.Source)
 
 	err := db.View(func(tx *buntdb.Tx) error {
 		saltString, err := tx.Get(KeySalt)
@@ -62,7 +63,7 @@ func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
 			return fmt.Errorf("Could not get salt string: %s", err.Error())
 		}
 
-		b.Salt, err = base64.StdEncoding.DecodeString(saltString)
+		m.Salt, err = base64.StdEncoding.DecodeString(saltString)
 		if err != nil {
 			return fmt.Errorf("Could not decode b64'd salt: %s", err.Error())
 		}
@@ -74,16 +75,16 @@ func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
 		return nil, fmt.Errorf("Creating new bouncer failed: %s", err.Error())
 	}
 
-	return &b, nil
+	return &m, nil
 }
 
 // Run starts the bouncer, creating the listeners and server connections.
-func (b *Bouncer) Run() error {
+func (m *Manager) Run() error {
 	// create reactor
 	scReactor := gircclient.NewReactor()
 
 	// load users
-	err := b.DB.Update(func(tx *buntdb.Tx) error {
+	err := m.DB.Update(func(tx *buntdb.Tx) error {
 		var userIDs []string
 
 		tx.DescendKeys("user.info *", func(key, value string) bool {
@@ -93,17 +94,17 @@ func (b *Bouncer) Run() error {
 
 		// add users to bouncer
 		for _, id := range userIDs {
-			user, err := loadUser(b.Config, b.DB, tx, id)
+			user, err := loadUser(m.Config, m.DB, tx, id)
 			if err != nil {
 				return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
 			}
 
-			b.Users[id] = user
+			m.Users[id] = user
 		}
 
 		// start server connections for all users
 		for _, id := range userIDs {
-			b.Users[id].StartServerConnections(scReactor)
+			m.Users[id].StartServerConnections(scReactor)
 		}
 
 		return nil
@@ -113,8 +114,8 @@ func (b *Bouncer) Run() error {
 	}
 
 	// open listeners and wait
-	for _, address := range b.Config.Bouncer.Listeners {
-		config, listenTLS := b.Config.Bouncer.TLSListeners[address]
+	for _, address := range m.Config.Bouncer.Listeners {
+		config, listenTLS := m.Config.Bouncer.TLSListeners[address]
 
 		listener, err := net.Listen("tcp", address)
 		if err != nil {
@@ -140,23 +141,23 @@ func (b *Bouncer) Run() error {
 				}
 				fmt.Println(fmt.Sprintf("%s accept: %s", address, conn.RemoteAddr()))
 
-				b.newConns <- conn
+				m.newConns <- conn
 			}
 		}()
 
-		b.Listeners = append(b.Listeners, listener)
+		m.Listeners = append(m.Listeners, listener)
 	}
 
 	// and wait
 	var done bool
 	for !done {
 		select {
-		case <-b.signals:
+		case <-m.quitSignals:
 			//TODO(dan): Write real shutdown code
 			log.Fatal("Shutting down! (TODO: write real code)")
 			done = true
-		case conn := <-b.newConns:
-			NewListener(b, conn)
+		case conn := <-m.newConns:
+			NewListener(m, conn)
 		}
 	}
 

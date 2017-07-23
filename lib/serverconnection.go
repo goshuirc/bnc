@@ -153,7 +153,7 @@ func (sc *ServerConnection) disconnectHandler(event string, info eventmgr.InfoMa
 	sc.currentServer = nil
 
 	for _, listener := range sc.Listeners {
-		listener.Send(nil, listener.Bouncer.StatusSource, "PRIVMSG", "Disconnected from server")
+		listener.Send(nil, listener.Manager.StatusSource, "PRIVMSG", "Disconnected from server")
 	}
 }
 

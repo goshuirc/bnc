@@ -24,3 +24,10 @@ A ServerConnection is created for a specific user's network connection. Every us
 ### Listeners
 
 A listener is created for every IRC client that connects in to GoshuBNC. Every listener belongs to a user. Every listener can 'listen' to one user+network (and gets events forwarded to it from the relevant ServerConnection in use at that time for the given user+network).
+
+
+## Client Library
+
+The bouncer uses the [GoshuIRC-Go](https://github.com/goshuirc/irc-go) library for outgoing ServerConnections. The client library has two main components, the **Reactor** which manages connections, and the **ServerConnection** that represents a connection to an IRC server. The Reactor manages one or more ServerConnections.
+
+The BNC Manager has one client Reactor that keeps track of all connections made out. Each BNC ServerConnection uses one client ServerConnection in the background.
