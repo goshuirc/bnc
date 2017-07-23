@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"syscall"
 
 	"github.com/goshuirc/irc-go/client"
@@ -55,16 +56,22 @@ func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
 	b.Source = "irc.goshubnc"
 	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
 
-	saltRow := db.QueryRow(`SELECT value FROM ircbnc WHERE key = ?`, "crypto.salt")
-	var saltString string
-	err := saltRow.Scan(&saltString)
-	if err != nil {
-		return nil, fmt.Errorf("Creating new bouncer failed (could not scan out salt string):", err.Error())
-	}
+	err := db.View(func(tx *buntdb.Tx) error {
+		saltString, err := tx.Get(keySalt)
+		if err != nil {
+			return fmt.Errorf("Could not get salt string: %s", err.Error())
+		}
 
-	b.Salt, err = base64.StdEncoding.DecodeString(saltString)
+		b.Salt, err = base64.StdEncoding.DecodeString(saltString)
+		if err != nil {
+			return fmt.Errorf("Could not decode b64'd salt: %s", err.Error())
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return nil, fmt.Errorf("Creating new bouncer failed (could not decode b64'd salt):", err.Error())
+		return nil, fmt.Errorf("Creating new bouncer failed: %s", err.Error())
 	}
 
 	return &b, nil
@@ -76,25 +83,31 @@ func (b *Bouncer) Run() error {
 	scReactor := gircclient.NewReactor()
 
 	// load users
-	rows, err := b.DB.Query(`SELECT id FROM users`)
-	if err != nil {
-		return fmt.Errorf("Could not run bouncer (loading users from db): %s", err.Error())
-	}
-	for rows.Next() {
-		var id string
-		err = rows.Scan(&id)
-		if err != nil {
-			return fmt.Errorf("Could not run bouncer (scanning user names from db): %s", err.Error())
+	err := b.DB.Update(func(tx *buntdb.Tx) error {
+		var userIDs []string
+
+		tx.DescendKeys("user.info *", func(key, value string) bool {
+			userIDs = append(userIDs, strings.TrimPrefix(key, "user.info "))
+			return true // continue looping through keys
+		})
+
+		// add users to bouncer
+		for _, id := range userIDs {
+			user, err := loadUser(b.Config, b.DB, tx, id)
+			if err != nil {
+				return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
+			}
+
+			b.Users[id] = user
 		}
 
-		user, err := loadUser(b.Config, b.DB, id)
-		if err != nil {
-			return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
+		// start server connections for all users
+		for _, id := range userIDs {
+			b.Users[id].StartServerConnections(scReactor)
 		}
 
-		user.StartServerConnections(scReactor)
-		b.Users[id] = user
-	}
+		return nil
+	})
 
 	// open listeners and wait
 	for _, address := range b.Config.Bouncer.Listeners {

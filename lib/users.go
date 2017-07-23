@@ -32,7 +32,7 @@ type User struct {
 }
 
 // LoadUser returns the given user.
-func loadUser(config *Config, db *buntdb.DB, id string) (*User, error) {
+func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, error) {
 	var user User
 	user.ID = id
 	user.Name = id //TODO(dan): Store Name and ID separately in the future if we want to
