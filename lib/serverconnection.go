@@ -215,6 +215,7 @@ func (sc *ServerConnection) DumpChannels(listener *Listener) {
 	for channel := range sc.Channels {
 		//TODO(dan): add channel keys and enabled/disable bool here
 		listener.Send(nil, sc.currentServer.Nick, "JOIN", channel)
+		sc.currentServer.Send(nil, "", "NAMES", channel)
 	}
 }
 
