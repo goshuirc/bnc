@@ -23,4 +23,4 @@ A ServerConnection is created for a specific user's network connection. Every us
 
 ### Listeners
 
-A listener is created for every IRC client that connects in to GoshuBNC. Every listener can 'listen' to one user+network (and gets events forwarded to it from the relevant ServerConnection in use at that time for the given user+network).
+A listener is created for every IRC client that connects in to GoshuBNC. Every listener belongs to a user. Every listener can 'listen' to one user+network (and gets events forwarded to it from the relevant ServerConnection in use at that time for the given user+network).
