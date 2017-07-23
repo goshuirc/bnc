@@ -6,6 +6,7 @@ package ircbnc
 import (
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/bytefmt"
@@ -115,7 +116,7 @@ func (listener *Listener) processIncomingLine(line string) bool {
 		return true
 	}
 
-	command, canBeParsed := Commands[msg.Command]
+	command, canBeParsed := ClientCommands[strings.ToUpper(msg.Command)]
 
 	if canBeParsed {
 		return command.Run(listener, msg)
