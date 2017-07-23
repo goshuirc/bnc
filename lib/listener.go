@@ -50,9 +50,10 @@ func NewListener(m *Manager, conn net.Conn) {
 		ConnectTime: now,
 		Source:      m.Source,
 		regLocks: map[string]bool{
-			"CAP":  true,
-			"NICK": false,
-			"USER": false,
+			"CAP":      true,
+			"NICK":     false,
+			"USER":     false,
+			"LISTENER": false,
 		},
 	}
 
