@@ -57,7 +57,7 @@ func NewBouncer(config *Config, db *buntdb.DB) (*Bouncer, error) {
 	b.StatusSource = fmt.Sprintf("*status!bnc@%s", b.Source)
 
 	err := db.View(func(tx *buntdb.Tx) error {
-		saltString, err := tx.Get(keySalt)
+		saltString, err := tx.Get(KeySalt)
 		if err != nil {
 			return fmt.Errorf("Could not get salt string: %s", err.Error())
 		}

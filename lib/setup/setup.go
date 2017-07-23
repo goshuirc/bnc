@@ -112,6 +112,14 @@ func InitialSetup(db *buntdb.DB) {
 
 	var err error
 
+	// generate bouncer salt
+	bncSalt, err := ircbnc.NewSalt()
+	encodedBncSalt := base64.StdEncoding.EncodeToString(bncSalt)
+	err = db.Update(func(tx *buntdb.Tx) error {
+		tx.Set(ircbnc.KeySalt, encodedBncSalt, nil)
+		return nil
+	})
+
 	Section("Admin user settings")
 	var username string
 	var goodUsername string
@@ -133,14 +141,13 @@ func InitialSetup(db *buntdb.DB) {
 	}
 
 	// generate our salts
-	bncSalt, err := ircbnc.NewSalt()
 	userSalt, err := ircbnc.NewSalt()
 	encodedUserSalt := base64.StdEncoding.EncodeToString(userSalt)
 	if err != nil {
 		log.Fatal("Could not generate cryptographically-secure salt for the user:", err.Error())
 	}
 
-	var passHash []byte
+	var encodedPassHash string
 	for {
 		password, err := QueryNoEcho("Enter password: ")
 
@@ -161,7 +168,8 @@ func InitialSetup(db *buntdb.DB) {
 			continue
 		}
 
-		passHash, err = ircbnc.GenerateFromPassword(bncSalt, userSalt, password)
+		passHash, err := ircbnc.GenerateFromPassword(bncSalt, userSalt, password)
+		encodedPassHash = base64.StdEncoding.EncodeToString(passHash)
 
 		if err == nil {
 			break
@@ -230,7 +238,7 @@ func InitialSetup(db *buntdb.DB) {
 			ID:                  goodUsername,
 			Role:                "Owner",
 			EncodedSalt:         encodedUserSalt,
-			PasswordHash:        string(passHash),
+			EncodedPasswordHash: encodedPassHash,
 			DefaultNick:         ircNick,
 			DefaultNickFallback: ircFbNick,
 			DefaultUsername:     ircUser,

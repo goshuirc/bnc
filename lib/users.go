@@ -62,7 +62,10 @@ func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, e
 	}
 
 	//TODO(dan): Make the below both have the same named fields
-	user.HashedPassword = []byte(ui.PasswordHash) //TODO(dan): make both these []byte
+	user.HashedPassword, err = base64.StdEncoding.DecodeString(ui.EncodedPasswordHash)
+	if err != nil {
+		return nil, fmt.Errorf("Could not load user (decoding password): %s", err.Error())
+	}
 	user.DefaultNick = ui.DefaultNick
 	user.DefaultFbNick = ui.DefaultNickFallback
 	user.DefaultUser = ui.DefaultUsername

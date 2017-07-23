@@ -19,7 +19,7 @@ const (
 	// latest schema of the db
 	latestDbSchema = "1"
 	// key for the primary salt used by the ircd
-	keySalt = "crypto.salt"
+	KeySalt = "crypto.salt"
 
 	// KeyUserInfo stores the general info of a specific user in our database
 	KeyUserInfo = "user.info %s"
@@ -38,7 +38,7 @@ type UserInfo struct {
 	ID                  string
 	Role                string
 	EncodedSalt         string `json:"salt"`
-	PasswordHash        string `json:"hash"`
+	EncodedPasswordHash string `json:"hash"`
 	DefaultNick         string `json:"default-nick"`
 	DefaultNickFallback string `json:"default-nick-fallback"`
 	DefaultUsername     string `json:"default-username"`
@@ -93,7 +93,7 @@ func InitDB(path string) {
 		if err != nil {
 			log.Fatal("Could not generate cryptographically-secure salt for the database:", err.Error())
 		}
-		tx.Set(keySalt, encodedSalt, nil)
+		tx.Set(KeySalt, encodedSalt, nil)
 
 		// set schema version
 		tx.Set(keySchemaVersion, latestDbSchema, nil)
