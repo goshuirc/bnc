@@ -9,7 +9,7 @@ import (
 
 const (
 	// SemVer is the semantic version of GoshuBNC.
-	SemVer = "0.0.0-unreleased"
+	SemVer = "0.1.0-unreleased"
 )
 
 var (

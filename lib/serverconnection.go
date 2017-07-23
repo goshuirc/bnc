@@ -5,6 +5,7 @@ package ircbnc
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -54,7 +55,7 @@ func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnect
 	sc.User = user
 
 	// load general info
-	var scInfo ServerConnectionInfo
+	scInfo := &ServerConnectionInfo{}
 	scInfoString, err := tx.Get(fmt.Sprintf(KeyServerConnectionInfo, user.ID, name))
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc details from db): %s", err.Error())
@@ -91,14 +92,14 @@ func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnect
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc channels from db): %s", err.Error())
 	}
 
-	var scChans ServerConnectionChannels
+	scChans := &ServerConnectionChannels{}
 	err = json.Unmarshal([]byte(scChannelString), scChans)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
 	}
 
 	sc.Channels = make(map[string]string)
-	for _, channel := range scChans {
+	for _, channel := range *scChans {
 		//TODO(dan): Store channel key and whether to use key here too, etc etc
 		sc.Channels[channel.Name] = channel.Name
 	}
@@ -109,14 +110,14 @@ func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnect
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc addresses from db): %s", err.Error())
 	}
 
-	var scAddresses ServerConnectionAddresses
+	scAddresses := &ServerConnectionAddresses{}
 	err = json.Unmarshal([]byte(scAddressesString), scAddresses)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc addresses): %s", err.Error())
 	}
 
 	// check port number and add addresses
-	for _, address := range scAddresses {
+	for _, address := range *scAddresses {
 		if address.Port < 1 || address.Port > 65535 {
 			return nil, fmt.Errorf("Could not create new ServerConnection (port %d is not valid)", address.Port)
 		}
@@ -288,7 +289,12 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	for _, address := range sc.Addresses {
 		fullAddress := net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
 
-		err = server.Connect(fullAddress, address.UseTLS, nil)
+		var tlsConfig tls.Config
+		if !address.VerifyTLS {
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		err = server.Connect(fullAddress, address.UseTLS, &tlsConfig)
 		if err == nil {
 			break
 		}

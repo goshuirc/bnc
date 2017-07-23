@@ -50,7 +50,7 @@ func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, e
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (loading user info from db): %s", err.Error())
 	}
-	var ui *UserInfo
+	ui := &UserInfo{}
 	err = json.Unmarshal([]byte(infoString), ui)
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (unmarshalling user info from db): %s", err.Error())
@@ -71,7 +71,7 @@ func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, e
 	// load server connections
 	var scError error
 	tx.DescendKeys(fmt.Sprintf("user.server.info %s *", user.ID), func(key, value string) bool {
-		name := strings.TrimPrefix(fmt.Sprintf("user.server.info %s ", user.ID), key)
+		name := strings.TrimPrefix(key, fmt.Sprintf("user.server.info %s ", user.ID))
 
 		sc, err := LoadServerConnection(name, user, tx)
 		if err != nil {
