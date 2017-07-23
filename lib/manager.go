@@ -113,7 +113,7 @@ func (m *Manager) Run() error {
 		return err
 	}
 
-	// open listeners and wait
+	// open listeners
 	for _, address := range m.Config.Bouncer.Listeners {
 		config, listenTLS := m.Config.Bouncer.TLSListeners[address]
 
@@ -154,7 +154,7 @@ func (m *Manager) Run() error {
 		select {
 		case <-m.quitSignals:
 			//TODO(dan): Write real shutdown code
-			log.Fatal("Shutting down! (TODO: write real code)")
+			log.Fatal("Shutting down! (TODO: write real shutdown code)")
 			done = true
 		case conn := <-m.newConns:
 			NewListener(m, conn)

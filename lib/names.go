@@ -5,6 +5,7 @@ package ircbnc
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"unicode"
 
@@ -49,13 +50,16 @@ func IrcName(name string, isChannel bool) (string, error) {
 // BncName takes the given name and returns a casefolded name appropriate for use with ircbnc.
 // This includes usernames, network names, etc.
 func BncName(name string) (string, error) {
-	name, err := precis.UsernameCaseMapped.CompareKey(name)
+	foldedName, err := precis.UsernameCaseMapped.CompareKey(name)
+	if err != nil {
+		return "", fmt.Errorf("Could not casefold bncname [%s]: %s", name, err.Error())
+	}
 
-	if len(name) < 1 {
+	if len(foldedName) < 1 {
 		return "", errNameNil
 	}
 
-	for _, char := range name {
+	for _, char := range foldedName {
 		// exclude space characters
 		if unicode.IsSpace(char) {
 			return "", errNameSpace
@@ -66,9 +70,9 @@ func BncName(name string) (string, error) {
 		}
 	}
 
-	if strings.Contains("0123456789", string(name[0])) {
+	if strings.Contains("0123456789", string(foldedName[0])) {
 		return "", errNameDigit
 	}
 
-	return name, err
+	return foldedName, err
 }

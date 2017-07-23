@@ -83,11 +83,10 @@ func (listener *Listener) tryRegistration() {
 
 // DumpRegistration dumps the registration numerics/replies to the listener.
 func (listener *Listener) DumpRegistration() {
-	sc := listener.ServerConnection
-	if sc == nil {
+	if listener.ServerConnection == nil {
 		listener.SendNilConnect()
 	} else {
-		sc.DumpRegistration(listener)
+		listener.ServerConnection.DumpRegistration(listener)
 	}
 }
 
