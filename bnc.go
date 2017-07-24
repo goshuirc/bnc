@@ -13,7 +13,7 @@ import (
 	"github.com/tidwall/buntdb"
 
 	// Different parts of the project acting independantly
-	"github.com/goshuirc/bnc/lib/components/control"
+	"github.com/goshuirc/bnc/lib/components/componentLoader"
 )
 
 func main() {
@@ -61,7 +61,7 @@ Options:
 		}
 
 		// Start the different components
-		bncComponentControl.Run(manager)
+		bncComponentLoader.Run(manager)
 
 		err = manager.Run()
 		if err != nil {
