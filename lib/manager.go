@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/goshuirc/eventmgr"
 	"github.com/goshuirc/irc-go/client"
 	"github.com/tidwall/buntdb"
 )
@@ -38,6 +39,8 @@ type Manager struct {
 
 	Source       string
 	StatusSource string
+
+	Bus eventmgr.EventManager
 
 	Salt []byte
 }

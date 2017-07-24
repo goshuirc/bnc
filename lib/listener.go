@@ -13,6 +13,7 @@ import (
 
 	"log"
 
+	"github.com/goshuirc/eventmgr"
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
@@ -110,8 +111,21 @@ func (listener *Listener) DumpChannels() {
 // processIncomingLine splits and handles the given command line.
 // Returns true if client is exiting (sent a QUIT command, etc).
 func (listener *Listener) processIncomingLine(line string) bool {
-	msg, err := ircmsg.ParseLine(line)
-	if err != nil {
+	msg, parseLineErr := ircmsg.ParseLine(line)
+
+	// Trigger the event if the line parsed or not just incase something else wants to
+	// deal with them
+	event := eventmgr.NewInfoMap()
+	event["listener"] = listener
+	event["raw"] = line
+	event["message"] = msg
+	event["halt"] = false
+	listener.Manager.Bus.Dispatch("irc.client.raw", event)
+	if event["halt"].(bool) == true {
+		return false
+	}
+
+	if parseLineErr != nil {
 		listener.Send(nil, "", "ERROR", "Your client sent a malformed line")
 		return true
 	}

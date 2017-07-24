@@ -11,6 +11,9 @@ import (
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/bnc/lib/setup"
 	"github.com/tidwall/buntdb"
+
+	// Different parts of the project acting independantly
+	"github.com/goshuirc/bnc/lib/components/control"
 )
 
 func main() {
@@ -56,6 +59,9 @@ Options:
 		if err != nil {
 			log.Fatal("Could not create manager:", err.Error())
 		}
+
+		// Start the different components
+		bncComponentControl.Run(manager)
 
 		err = manager.Run()
 		if err != nil {
