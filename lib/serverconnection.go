@@ -31,7 +31,7 @@ type ServerConnection struct {
 	FbNickname string
 	Username   string
 	Realname   string
-	Channels   map[string]string
+	Channels   map[string]ServerConnectionChannel
 
 	receiveLines  chan *string
 	ReceiveEvents chan Message
@@ -98,10 +98,14 @@ func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnect
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
 	}
 
-	sc.Channels = make(map[string]string)
+	sc.Channels = make(map[string]ServerConnectionChannel)
 	for _, channel := range *scChans {
-		//TODO(dan): Store channel key and whether to use key here too, etc etc
-		sc.Channels[channel.Name] = channel.Name
+		sc.Channels[channel.Name] = ServerConnectionChannel{
+			Name:   channel.Name,
+			Key:    channel.Key,
+			UseKey: channel.UseKey,
+		}
+
 	}
 
 	// load addresses
@@ -309,6 +313,10 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 	server.RegisterEvent("in", "raw", rawHandler, 0)
 	server.RegisterEvent("out", "raw", rawHandler, 0)
 
+	for _, channel := range sc.Channels {
+		server.JoinChannel(channel.Name, channel.Key, channel.UseKey)
+	}
+
 	var err error
 	for _, address := range sc.Addresses {
 		fullAddress := net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
@@ -335,6 +343,26 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 
 func (sc *ServerConnection) handleJoin(event string, info eventmgr.InfoMap) {
 	params := info["params"].([]string)
-	log.Println("adding channel", params[0])
-	sc.Channels[params[0]] = ""
+	if len(params) < 1 {
+		// invalid JOIN message
+		return
+	}
+
+	var name, key string
+	var useKey bool
+	name = params[0]
+	if 1 < len(params) && 0 < len(params[1]) {
+		key = params[1]
+		useKey = true
+	}
+
+	//TODO(dan): Store the new channel in the datastore
+	//TODO(dan): On PARTs, remove the channel from the datastore as well
+	log.Println("adding channel", name)
+	sc.Channels[name] = ServerConnectionChannel{
+		Name:   name,
+		Key:    key,
+		UseKey: useKey,
+	}
+
 }

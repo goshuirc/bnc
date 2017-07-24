@@ -1,0 +1,108 @@
+memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
+
+[[projects]]
+  name = "code.cloudfoundry.org/bytefmt"
+  packages = ["."]
+  revision = "cbe033486cf0620d3bb77d8ef7f22ab346ad3628"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/DanielOaks/go-idn"
+  packages = ["idna2003/stringprep"]
+  revision = "76db0e10dc6513445bbe3e4f5b2289ff1fdac88d"
+
+[[projects]]
+  name = "github.com/docopt/docopt-go"
+  packages = ["."]
+  revision = "784ddc588536785e7299f7272f39101f7faccc3f"
+  version = "0.6.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/fatih/color"
+  packages = ["."]
+  revision = "62e9147c64a1ed519147b62a56a14e83e2be02c1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/goshuirc/eventmgr"
+  packages = ["."]
+  revision = "060479027c934f620704224dbaf680d43176b011"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/goshuirc/irc-go"
+  packages = ["client","ircfmt","ircmap","ircmsg"]
+  revision = "c9577d7c349ac27adae57d5b3ac2d66ccdb6b958"
+
+[[projects]]
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  revision = "941b50ebc6efddf4c41c8e4537a5f68a4e686b24"
+  version = "v0.0.8"
+
+[[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
+  version = "v0.0.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/btree"
+  packages = ["."]
+  revision = "9876f1454cf0993a53d74c27196993e345f50dd1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/buntdb"
+  packages = ["."]
+  revision = "83418750ee775aa24194606fffe7fec391975a65"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/gjson"
+  packages = ["."]
+  revision = "c784c417818f59d6597274642d8ac1d09efc9b01"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/grect"
+  packages = ["."]
+  revision = "ba9a043346eba55344e40d66a5e74cfda3a9d293"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/match"
+  packages = ["."]
+  revision = "173748da739a410c5b0b813b956f89ff94730b4c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tidwall/rtree"
+  packages = ["."]
+  revision = "d4a8a3d30d5729f85edfba1745241f3a621d0359"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["bcrypt","blowfish","ssh/terminal"]
+  revision = "6914964337150723782436d56b3f21610a74ce7b"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "c4489faa6e5ab84c0ef40d6ee878f7a030281f0f"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/text"
+  packages = ["cases","internal","internal/gen","internal/tag","internal/triegen","internal/ucd","language","runes","secure/bidirule","secure/precis","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable","width"]
+  revision = "836efe42bb4aa16aaa17b9c155d8813d336ed720"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "25c4ec802a7d637f88d584ab26798e94ad14c13b"
