@@ -7,7 +7,6 @@ import (
 
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/eventmgr"
-	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 // Nick of the controller
@@ -15,21 +14,24 @@ const CONTROL_NICK = "*goshu"
 const CONTROL_PREFIX = CONTROL_NICK + "!bnc@irc.goshu"
 
 func Run(manager *ircbnc.Manager) {
-	manager.Bus.Attach("irc.client.raw", onMessage, 0)
+	manager.Bus.Attach(ircbnc.HookIrcClientRawName, onMessage, 0)
 }
 
-func onMessage(event string, info eventmgr.InfoMap) {
-	listener := info["listener"].(*ircbnc.Listener)
-	msg := info["message"].(ircmsg.IrcMessage)
+func onMessage(eventName string, info eventmgr.InfoMap) {
+	event, _ := info["event"].(*ircbnc.HookIrcClientRaw)
+	msg := event.Message
+	listener := event.Listener
 	log.Println("Inside controls component", msg.Command, msg.Params[0])
 	if msg.Command != "PRIVMSG" || msg.Params[0] != CONTROL_NICK {
 		return
 	}
 
 	// Stop the message from being sent upstream
-	info["halt"] = true
+	event.Halt = true
 
 	if strings.HasPrefix("listnetworks", msg.Params[1]) {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Listing networks")
+		for _, network := range listener.User.Networks {
+			listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+network.Name)
+		}
 	}
 }

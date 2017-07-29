@@ -115,13 +115,15 @@ func (listener *Listener) processIncomingLine(line string) bool {
 
 	// Trigger the event if the line parsed or not just incase something else wants to
 	// deal with them
+	hook := HookIrcClientRaw{
+		Listener: listener,
+		Raw:      line,
+		Message:  msg,
+	}
 	event := eventmgr.NewInfoMap()
-	event["listener"] = listener
-	event["raw"] = line
-	event["message"] = msg
-	event["halt"] = false
-	listener.Manager.Bus.Dispatch("irc.client.raw", event)
-	if event["halt"].(bool) == true {
+	event["event"] = &hook
+	listener.Manager.Bus.Dispatch(HookIrcClientRawName, event)
+	if hook.Halt {
 		return false
 	}
 
