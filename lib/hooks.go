@@ -30,11 +30,32 @@ func (hooks *HookEmitter) Register(hookName string, p func(interface{})) {
 	hooks.Registered[hookName] = append(hooks.Registered[hookName], p)
 }
 
-var HookIrcClientRawName = "irc.client.raw"
+/**
+ * Hooks that are dispatched throughout the core.
+ * Components and plugins will listen out for these hooks
+ * to extend the core functionality.
+ */
 
-type HookIrcClientRaw struct {
+var HookIrcRawName = "irc.raw"
+
+type HookIrcRaw struct {
+	Listener   *Listener
+	FromServer bool
+	FromClient bool
+	Raw        string
+	Message    ircmsg.IrcMessage
+	Halt       bool
+}
+
+var HookNewListenerName = "listener.new"
+
+type HookNewListener struct {
 	Listener *Listener
-	Raw      string
-	Message  ircmsg.IrcMessage
 	Halt     bool
+}
+
+var HookListenerCloseName = "listener.close"
+
+type HookListenerClose struct {
+	Listener *Listener
 }
