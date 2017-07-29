@@ -39,12 +39,15 @@ type Manager struct {
 	Source       string
 	StatusSource string
 
+	Bus HookEmitter
+
 	Salt []byte
 }
 
 // NewManager create a new IRC bouncer from the given config and database.
 func NewManager(config *Config, db *buntdb.DB) (*Manager, error) {
 	var m Manager
+	m.Bus = MakeHookEmitter()
 	m.Config = config
 	m.DB = db
 

@@ -110,8 +110,21 @@ func (listener *Listener) DumpChannels() {
 // processIncomingLine splits and handles the given command line.
 // Returns true if client is exiting (sent a QUIT command, etc).
 func (listener *Listener) processIncomingLine(line string) bool {
-	msg, err := ircmsg.ParseLine(line)
-	if err != nil {
+	msg, parseLineErr := ircmsg.ParseLine(line)
+
+	// Trigger the event if the line parsed or not just incase something else wants to
+	// deal with them
+	hook := &HookIrcClientRaw{
+		Listener: listener,
+		Raw:      line,
+		Message:  msg,
+	}
+	listener.Manager.Bus.Dispatch(HookIrcClientRawName, hook)
+	if hook.Halt {
+		return false
+	}
+
+	if parseLineErr != nil {
 		listener.Send(nil, "", "ERROR", "Your client sent a malformed line")
 		return true
 	}
