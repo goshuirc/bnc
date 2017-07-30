@@ -33,8 +33,15 @@ func onMessage(hook interface{}) {
 	event.Halt = true
 
 	if strings.HasPrefix("listnetworks", msg.Params[1]) {
+		table := NewTable()
+		table.SetHeader([]string{"Name", "Nick", "Connected"})
 		for _, network := range listener.User.Networks {
-			listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+network.Name)
+			connected := "No"
+			if network.Connected {
+				connected = "Yes"
+			}
+			table.Append([]string{network.Name, network.Nickname, connected})
 		}
+		table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
 	}
 }
