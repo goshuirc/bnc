@@ -38,6 +38,7 @@ type Config struct {
 		DatabasePath string `yaml:"database-path"`
 		Listeners    []string
 		TLSListeners map[string]*TLSListenConfig `yaml:"tls-listeners"`
+		Logging      map[string]map[string]string
 	}
 }
 

@@ -42,6 +42,8 @@ type HookIrcRaw struct {
 	Listener   *Listener
 	FromServer bool
 	FromClient bool
+	User       *User
+	Server     *ServerConnection
 	Raw        string
 	Message    ircmsg.IrcMessage
 	Halt       bool

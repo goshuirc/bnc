@@ -167,6 +167,8 @@ func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) 
 
 	hook := &HookIrcRaw{
 		FromServer: true,
+		User:       &sc.User,
+		Server:     sc,
 		Raw:        line,
 		Message:    msg,
 	}

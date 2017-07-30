@@ -131,6 +131,8 @@ func (listener *Listener) processIncomingLine(line string) bool {
 	hook := &HookIrcRaw{
 		FromClient: true,
 		Listener:   listener,
+		User:       listener.User,
+		Server:     listener.ServerConnection,
 		Raw:        line,
 		Message:    msg,
 	}

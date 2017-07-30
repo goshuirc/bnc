@@ -15,3 +15,8 @@ bouncer:
         ":6697":
             cert: tls.crt
             key: tls.key
+
+    logging:
+        file:
+            # folder to store chat logs
+            path: chatlogs/
