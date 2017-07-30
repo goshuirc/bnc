@@ -3,9 +3,8 @@ package bncComponentControl
 import (
 	"strings"
 
-	"log"
-
 	"github.com/goshuirc/bnc/lib"
+	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 // Nick of the controller
@@ -24,7 +23,7 @@ func onMessage(hook interface{}) {
 
 	msg := event.Message
 	listener := event.Listener
-	log.Println("Inside controls component", msg.Command, msg.Params[0])
+
 	if msg.Command != "PRIVMSG" || msg.Params[0] != CONTROL_NICK {
 		return
 	}
@@ -32,16 +31,27 @@ func onMessage(hook interface{}) {
 	// Stop the message from being sent upstream
 	event.Halt = true
 
-	if strings.HasPrefix("listnetworks", msg.Params[1]) {
-		table := NewTable()
-		table.SetHeader([]string{"Name", "Nick", "Connected"})
-		for _, network := range listener.User.Networks {
-			connected := "No"
-			if network.Connected {
-				connected = "Yes"
-			}
-			table.Append([]string{network.Name, network.Nickname, connected})
-		}
-		table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
+	parts := strings.Split(msg.Params[1], " ")
+	command := strings.ToLower(parts[0])
+	params := parts[1:]
+
+	switch command {
+	case "listnetworks":
+		commandListNetworks(listener, params, msg)
 	}
+}
+
+func commandListNetworks(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	table := NewTable()
+	table.SetHeader([]string{"Name", "Nick", "Connected"})
+
+	for _, network := range listener.User.Networks {
+		connected := "No"
+		if network.Connected {
+			connected = "Yes"
+		}
+		table.Append([]string{network.Name, network.Nickname, connected})
+	}
+
+	table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
 }
