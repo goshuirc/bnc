@@ -43,7 +43,7 @@ func (ds FileMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 	}
 
 	// Make sure the chat directly exists
-	logPath := filepath.Join(ds.logPath, event.Server.Name)
+	logPath := filepath.Join(ds.logPath, event.User.ID, event.Server.Name)
 	os.MkdirAll(logPath, os.ModePerm)
 	filename := filepath.Join(logPath, destination+".log")
 
