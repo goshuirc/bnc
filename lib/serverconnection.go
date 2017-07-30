@@ -163,6 +163,17 @@ func (sc *ServerConnection) disconnectHandler(event string, info eventmgr.InfoMa
 
 func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) {
 	line := info["data"].(string)
+	msg, _ := ircmsg.ParseLine(line)
+
+	hook := &HookIrcRaw{
+		FromServer: true,
+		Raw:        line,
+		Message:    msg,
+	}
+	sc.User.Manager.Bus.Dispatch(HookIrcRawName, hook)
+	if hook.Halt {
+		return
+	}
 
 	for _, listener := range sc.Listeners {
 		if listener.Registered {

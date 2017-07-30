@@ -97,7 +97,7 @@ func (m *Manager) Run() error {
 
 		// add users to bouncer
 		for _, id := range userIDs {
-			user, err := loadUser(m.Config, m.DB, tx, id)
+			user, err := loadUser(m, tx, id)
 			if err != nil {
 				return fmt.Errorf("Could not run bouncer (loading user from db): %s", err.Error())
 			}

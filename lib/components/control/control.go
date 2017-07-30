@@ -13,11 +13,15 @@ const CONTROL_NICK = "*goshu"
 const CONTROL_PREFIX = CONTROL_NICK + "!bnc@irc.goshu"
 
 func Run(manager *ircbnc.Manager) {
-	manager.Bus.Register(ircbnc.HookIrcClientRawName, onMessage)
+	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
 }
 
 func onMessage(hook interface{}) {
-	event := hook.(*ircbnc.HookIrcClientRaw)
+	event := hook.(*ircbnc.HookIrcRaw)
+	if !event.FromClient {
+		return
+	}
+
 	msg := event.Message
 	listener := event.Listener
 	log.Println("Inside controls component", msg.Command, msg.Params[0])

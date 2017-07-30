@@ -17,8 +17,9 @@ import (
 
 // User represents an ircbnc user.
 type User struct {
-	Config *Config
-	DB     *buntdb.DB
+	Manager *Manager
+	Config  *Config
+	DB      *buntdb.DB
 
 	ID   string
 	Name string
@@ -36,12 +37,13 @@ type User struct {
 }
 
 // LoadUser returns the given user.
-func loadUser(config *Config, db *buntdb.DB, tx *buntdb.Tx, id string) (*User, error) {
+func loadUser(manager *Manager, tx *buntdb.Tx, id string) (*User, error) {
 	var user User
 	user.ID = id
 	user.Name = id //TODO(dan): Store Name and ID separately in the future if we want to
-	user.Config = config
-	user.DB = db
+	user.Manager = manager
+	user.Config = manager.Config
+	user.DB = manager.DB
 
 	user.Networks = make(map[string]*ServerConnection)
 

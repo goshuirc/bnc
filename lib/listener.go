@@ -40,6 +40,10 @@ func (listener *Listener) RunSocketReader() {
 		}
 		listener.processIncomingLine(line)
 	}
+
+	listener.Manager.Bus.Dispatch(HookListenerCloseName, &HookListenerClose{
+		Listener: listener,
+	})
 }
 
 // NewListener creates a new Listener.
@@ -60,6 +64,16 @@ func NewListener(m *Manager, conn net.Conn) {
 
 	maxSendQBytes, _ := bytefmt.ToBytes("32k")
 	listener.Socket = NewSocket(conn, maxSendQBytes)
+
+	hook := &HookNewListener{
+		Listener: listener,
+	}
+	m.Bus.Dispatch(HookNewListenerName, hook)
+	if hook.Halt {
+		listener.Socket.Close()
+		return
+	}
+
 	go listener.Socket.RunSocketWriter()
 	go listener.RunSocketReader()
 }
@@ -114,12 +128,13 @@ func (listener *Listener) processIncomingLine(line string) bool {
 
 	// Trigger the event if the line parsed or not just incase something else wants to
 	// deal with them
-	hook := &HookIrcClientRaw{
-		Listener: listener,
-		Raw:      line,
-		Message:  msg,
+	hook := &HookIrcRaw{
+		FromClient: true,
+		Listener:   listener,
+		Raw:        line,
+		Message:    msg,
 	}
-	listener.Manager.Bus.Dispatch(HookIrcClientRawName, hook)
+	listener.Manager.Bus.Dispatch(HookIrcRawName, hook)
 	if hook.Halt {
 		return false
 	}
