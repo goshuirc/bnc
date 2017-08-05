@@ -2,7 +2,7 @@
 // Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
 // released under the MIT license
 
-package ircbnc
+package bncDataStoreBuntdb
 
 import (
 	"encoding/base64"
@@ -57,23 +57,6 @@ type ServerConnectionInfo struct {
 	Username         string
 	Realname         string
 }
-
-type ServerConnectionAddress struct {
-	Host      string
-	Port      int
-	UseTLS    bool `json:"use-tls"`
-	VerifyTLS bool `json:"verify-tls"`
-}
-
-type ServerConnectionAddresses []ServerConnectionAddress
-
-type ServerConnectionChannel struct {
-	Name   string
-	Key    string
-	UseKey bool `json:"use-key"`
-}
-
-type ServerConnectionChannels []ServerConnectionChannel
 
 // InitDB creates the database.
 func InitDB(path string) {

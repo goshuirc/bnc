@@ -75,29 +75,23 @@ func loadClientCommands() {
 				userid = splitString[0]
 			}
 
-			user, valid := listener.Manager.Users[userid]
-			if !valid {
+			user, loginErr := listener.Manager.Ds.AuthUser(userid, password)
+			if loginErr != nil {
 				listener.Send(nil, "", "ERROR", "Invalid username or password")
 				return true
 			}
 
-			loginError := CompareHashAndPassword(user.HashedPassword, listener.Manager.Salt, user.Salt, password)
-
-			if loginError == nil {
-				listener.User = user
-				network, netExists := user.Networks[networkID]
-				if netExists {
-					network.AddListener(listener)
-				} else {
-					log.Println("Network doesnt exist")
-					listener.regLocks["LISTENER"] = true
-					listener.tryRegistration()
-				}
-				return false
+			listener.User = user
+			network, netExists := user.Networks[networkID]
+			if netExists {
+				network.AddListener(listener)
+			} else {
+				log.Println("Network doesnt exist")
+				listener.regLocks["LISTENER"] = true
+				listener.tryRegistration()
 			}
 
-			listener.Send(nil, "", "ERROR", "Invalid username or password")
-			return true
+			return false
 		},
 	}
 

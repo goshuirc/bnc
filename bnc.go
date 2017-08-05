@@ -10,7 +10,8 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/bnc/lib/setup"
-	"github.com/tidwall/buntdb"
+
+	"github.com/goshuirc/bnc/lib/datastores/buntdb"
 
 	// Different parts of the project acting independantly
 	"github.com/goshuirc/bnc/lib/components/componentLoader"
@@ -41,21 +42,20 @@ Options:
 	}
 
 	if arguments["initdb"].(bool) {
-		ircbnc.InitDB(config.Bouncer.DatabasePath)
+		/*
+			ircbnc.InitDB(config.Bouncer.DatabasePath)
 
-		db, err := buntdb.Open(config.Bouncer.DatabasePath)
-		if err != nil {
-			log.Fatal("Could not open DB:", err.Error())
-		}
-		ircsetup.InitialSetup(db)
+			db, err := buntdb.Open(config.Bouncer.DatabasePath)
+			if err != nil {
+				log.Fatal("Could not open DB:", err.Error())
+			}
+			ircsetup.InitialSetup(db)
+		*/
 	} else if arguments["start"].(bool) {
 		fmt.Println("Starting", ircsetup.CbCyan("GoshuBNC"))
 
-		db, err := buntdb.Open(config.Bouncer.DatabasePath)
-		if err != nil {
-			log.Fatal("Could not open DB:", err.Error())
-		}
-		manager, err := ircbnc.NewManager(config, db)
+		ds := &bncDataStoreBuntdb.DataStore{}
+		manager, err := ircbnc.NewManager(config, ds)
 		if err != nil {
 			log.Fatal("Could not create manager:", err.Error())
 		}
