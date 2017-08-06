@@ -6,6 +6,7 @@ package ircbnc
 import (
 	"fmt"
 	"net"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -124,6 +125,13 @@ func (listener *Listener) DumpChannels() {
 // processIncomingLine splits and handles the given command line.
 // Returns true if client is exiting (sent a QUIT command, etc).
 func (listener *Listener) processIncomingLine(line string) bool {
+	// Don't let a single users error kill the entire bnc for everyone
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[ERROR] Recovered from %s\n%s", r, debug.Stack())
+		}
+	}()
+
 	msg, parseLineErr := ircmsg.ParseLine(line)
 
 	// Trigger the event if the line parsed or not just incase something else wants to
