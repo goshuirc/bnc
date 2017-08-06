@@ -24,16 +24,21 @@ func (ds *DataStore) Init(manager *ircbnc.Manager) error {
 
 	var err error
 
-	db, err := buntdb.Open(manager.Config.Bouncer.DatabasePath)
+	dbPath, _ := manager.Config.Bouncer.Storage["database"]
+	if dbPath == "" {
+		return errors.New("No database file has been configured")
+	}
+
+	db, err := buntdb.Open(dbPath)
 	if err != nil {
-		return errors.New("Could not open DB: " + err.Error())
+		return errors.New("Could not open database: " + err.Error())
 	}
 
 	ds.Db = db
 
 	err = ds.LoadSalt()
 	if err != nil {
-		return errors.New("Could not init DB: " + err.Error())
+		return errors.New("Could not initialize database: " + err.Error())
 	}
 	return nil
 }

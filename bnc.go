@@ -11,10 +11,10 @@ import (
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/bnc/lib/setup"
 
-	"github.com/goshuirc/bnc/lib/datastores/buntdb"
-
 	// Different parts of the project acting independantly
 	"github.com/goshuirc/bnc/lib/components/componentLoader"
+
+	"github.com/goshuirc/bnc/lib/datastores/buntdb"
 )
 
 func main() {
@@ -41,7 +41,11 @@ Options:
 		log.Fatal("Config file did not load successfully:", err.Error())
 	}
 
-	data := &bncDataStoreBuntdb.DataStore{}
+	data := getDataStoreInstance(config)
+	if data == nil {
+		log.Fatal("No valid storage engines have been confugured")
+	}
+
 	manager := ircbnc.NewManager(config, data)
 
 	dataErr := data.Init(manager)
@@ -68,4 +72,19 @@ Options:
 			log.Fatal(err.Error())
 		}
 	}
+}
+
+func getDataStoreInstance(config *ircbnc.Config) ircbnc.DataStoreInterface {
+	var data ircbnc.DataStoreInterface
+
+	storageType, _ := config.Bouncer.Storage["type"]
+	if storageType == "" {
+		storageType = "buntdb"
+	}
+
+	if storageType == "buntdb" {
+		data = &bncDataStoreBuntdb.DataStore{}
+	}
+
+	return data
 }

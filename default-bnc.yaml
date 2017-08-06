@@ -2,8 +2,9 @@
 
 # bouncer configuration
 bouncer:
-    # database filename
-    database-path: bnc.db
+    storage:
+        type: buntdb
+        database: bncdata.db
 
     # addresses to listen on
     listeners:
