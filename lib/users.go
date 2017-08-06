@@ -5,17 +5,16 @@ package ircbnc
 
 import (
 	"github.com/goshuirc/irc-go/client"
-	"github.com/tidwall/buntdb"
 )
 
 // User represents an ircbnc user.
 type User struct {
 	Manager *Manager
 	Config  *Config
-	DB      *buntdb.DB
 
 	ID   string
 	Name string
+	Role string
 
 	HashedPassword []byte
 	Salt           []byte

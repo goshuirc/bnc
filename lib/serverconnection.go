@@ -23,6 +23,7 @@ type ServerConnection struct {
 	Name      string
 	User      *User
 	Connected bool
+	Enabled   bool
 
 	Nickname   string
 	FbNickname string

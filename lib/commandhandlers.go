@@ -81,7 +81,8 @@ func loadClientCommands() {
 				return true
 			}
 
-			listener.User = user
+			// We want to use our existing User instance
+			listener.User = listener.Manager.Users[user.ID]
 			network, netExists := user.Networks[networkID]
 			if netExists {
 				network.AddListener(listener)

@@ -1,14 +1,13 @@
 package ircbnc
 
 type DataStoreInterface interface {
-	Init(*Manager) error
-	AddUser(id string, username string) (*User, error)
+	Init(manager *Manager) error
+	Setup() error
 	GetAllUsers() []*User
 	GetUserById(id string) *User
 	SaveUser(*User) error
+	SetUserPassword(user *User, newPassword string)
 	AuthUser(username string, password string) (*User, error)
-	SetUserPassword(userId string, newPassord string)
 	GetUserNetworks(userId string)
-	AddUserNetwork(userId string, netName string)
-	SaveNetwork(userId string, netName string)
+	SaveConnection(connection *ServerConnection) error
 }

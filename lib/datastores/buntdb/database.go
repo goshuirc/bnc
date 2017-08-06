@@ -50,6 +50,7 @@ type UserPermissions []string
 
 // ServerConnectionInfo stores info about a user's specific server connection
 type ServerConnectionInfo struct {
+	Name             string
 	Enabled          bool
 	ConnectPassword  string `json:"connect-password"`
 	Nickname         string
@@ -71,7 +72,7 @@ func InitDB(path string) {
 
 	err = store.Update(func(tx *buntdb.Tx) error {
 		// set base db salt
-		salt, err := NewSalt()
+		salt := NewSalt()
 		encodedSalt := base64.StdEncoding.EncodeToString(salt)
 		if err != nil {
 			log.Fatal("Could not generate cryptographically-secure salt for the database:", err.Error())

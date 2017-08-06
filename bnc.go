@@ -41,24 +41,24 @@ Options:
 		log.Fatal("Config file did not load successfully:", err.Error())
 	}
 
-	if arguments["initdb"].(bool) {
-		/*
-			ircbnc.InitDB(config.Bouncer.DatabasePath)
+	data := &bncDataStoreBuntdb.DataStore{}
+	manager := ircbnc.NewManager(config, data)
 
-			db, err := buntdb.Open(config.Bouncer.DatabasePath)
-			if err != nil {
-				log.Fatal("Could not open DB:", err.Error())
-			}
-			ircsetup.InitialSetup(db)
-		*/
+	dataErr := data.Init(manager)
+	if dataErr != nil {
+		log.Fatalln(dataErr.Error())
+	}
+
+	if arguments["initdb"].(bool) {
+		setupErr := data.Setup()
+		if setupErr != nil {
+			log.Fatal("Could not initialise the database: ", err.Error())
+		}
+
+		ircsetup.InitialSetup(manager)
+
 	} else if arguments["start"].(bool) {
 		fmt.Println("Starting", ircsetup.CbCyan("GoshuBNC"))
-
-		ds := &bncDataStoreBuntdb.DataStore{}
-		manager, err := ircbnc.NewManager(config, ds)
-		if err != nil {
-			log.Fatal("Could not create manager:", err.Error())
-		}
 
 		// Start the different components
 		bncComponentLoader.Run(manager)

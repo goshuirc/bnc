@@ -13,16 +13,10 @@ const newSaltLen = 30
 const defaultPasswordCost = 14
 
 // NewSalt returns a salt for crypto uses.
-func NewSalt() ([]byte, error) {
+func NewSalt() []byte {
 	salt := make([]byte, newSaltLen)
-	_, err := rand.Read(salt)
-
-	if err != nil {
-		var emptySalt []byte
-		return emptySalt, err
-	}
-
-	return salt, nil
+	rand.Read(salt)
+	return salt
 }
 
 // assemblePassword returns an assembled slice of bytes for the given password details.

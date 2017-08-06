@@ -14,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/goshuirc/irc-go/client"
-	"github.com/tidwall/buntdb"
 )
 
 var (
@@ -26,7 +25,6 @@ var (
 // Manager handles the different components that keep GoshuBNC spinning.
 type Manager struct {
 	Config *Config
-	DB     *buntdb.DB
 	Ds     DataStoreInterface
 
 	Users     map[string]*User
@@ -44,16 +42,12 @@ type Manager struct {
 }
 
 // NewManager create a new IRC bouncer from the given config and database.
-func NewManager(config *Config, ds DataStoreInterface) (*Manager, error) {
-	var m Manager
+func NewManager(config *Config, ds DataStoreInterface) *Manager {
+	m := &Manager{}
 	m.Bus = MakeHookEmitter()
 	m.Config = config
 
 	m.Ds = ds
-	dsErr := ds.Init(&m)
-	if dsErr != nil {
-		return nil, dsErr
-	}
 
 	m.newConns = make(chan net.Conn)
 	m.quitSignals = make(chan os.Signal, len(QuitSignals))
@@ -64,7 +58,7 @@ func NewManager(config *Config, ds DataStoreInterface) (*Manager, error) {
 	m.Source = "irc.goshubnc"
 	m.StatusSource = fmt.Sprintf("*status!bnc@%s", m.Source)
 
-	return &m, nil
+	return m
 }
 
 // Run starts the bouncer, creating the listeners and server connections.
@@ -76,6 +70,7 @@ func (m *Manager) Run() error {
 	users := m.Ds.GetAllUsers()
 	for _, user := range users {
 		m.Users[user.ID] = user
+		println("Found user " + user.ID)
 		m.Users[user.ID].StartServerConnections(scReactor)
 	}
 

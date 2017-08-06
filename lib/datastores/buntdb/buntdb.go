@@ -26,22 +26,36 @@ func (ds *DataStore) Init(manager *ircbnc.Manager) error {
 
 	db, err := buntdb.Open(manager.Config.Bouncer.DatabasePath)
 	if err != nil {
-		return errors.New("Could not open DB:" + err.Error())
+		return errors.New("Could not open DB: " + err.Error())
 	}
 
 	ds.Db = db
 
 	err = ds.LoadSalt()
 	if err != nil {
-		return errors.New("Could not init DB:" + err.Error())
+		return errors.New("Could not init DB: " + err.Error())
 	}
 	return nil
+}
+
+func (ds *DataStore) Setup() error {
+	// generate bouncer salt
+	bncSalt := NewSalt()
+	encodedBncSalt := base64.StdEncoding.EncodeToString(bncSalt)
+	err := ds.Db.Update(func(tx *buntdb.Tx) error {
+		tx.Set(KeySalt, encodedBncSalt, nil)
+		return nil
+	})
+
+	return err
 }
 
 func (ds *DataStore) LoadSalt() error {
 	err := ds.Db.View(func(tx *buntdb.Tx) error {
 		saltString, err := tx.Get(KeySalt)
-		if err != nil {
+		if err != nil && err.Error() == "not found" {
+			return nil
+		} else if err != nil {
 			return fmt.Errorf("Could not get salt string: %s", err.Error())
 		}
 
@@ -59,9 +73,10 @@ func (ds *DataStore) LoadSalt() error {
 func (ds *DataStore) GetAllUsers() []*ircbnc.User {
 	userIds := []string{}
 	users := []*ircbnc.User{}
-
+	println("Getting all users...")
 	ds.Db.View(func(tx *buntdb.Tx) error {
-		tx.DescendKeys("user.info  *", func(key, value string) bool {
+		tx.DescendKeys("user.info *", func(key, value string) bool {
+			println(key)
 			userIds = append(userIds, strings.TrimPrefix(key, "user.info "))
 			return true
 		})
@@ -82,17 +97,50 @@ func (ds *DataStore) GetAllUsers() []*ircbnc.User {
 	return users
 }
 
-func (ds *DataStore) AddUser(id string, username string) (*ircbnc.User, error) {
-	// TODO: Add the user to storage and return its User object
-	return &ircbnc.User{}, nil
-}
-
 func (ds *DataStore) GetUserById(id string) *ircbnc.User {
 	return &ircbnc.User{}
 }
 
-func (ds *DataStore) SaveUser(*ircbnc.User) error {
-	return nil
+func (ds *DataStore) SaveUser(user *ircbnc.User) error {
+	// TODO: If ID isn't set, set the ID now.
+	// An ID set = the user object was saved or retrieved from the db
+	ui := UserInfo{}
+	ui.ID = user.ID
+	ui.Role = user.Role
+	ui.EncodedSalt = base64.StdEncoding.EncodeToString(user.Salt)
+	ui.EncodedPasswordHash = base64.StdEncoding.EncodeToString(user.HashedPassword)
+	ui.DefaultNick = user.DefaultNick
+	ui.DefaultNickFallback = user.DefaultFbNick
+	ui.DefaultUsername = user.DefaultUser
+	ui.DefaultRealname = user.DefaultReal
+
+	uiBytes, err := json.Marshal(ui)
+	if err != nil {
+		return fmt.Errorf("Error marshalling user info: %s", err.Error())
+	}
+	uiString := string(uiBytes) //TODO(dan): Should we do this in a safer way?
+
+	// User permissions
+	upBytes, err := json.Marshal(user.Permissions)
+	if err != nil {
+		return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+	}
+	upString := string(upBytes) //TODO(dan): Should we do this in a safer way?
+
+	updateErr := ds.Db.Update(func(tx *buntdb.Tx) error {
+		var err error
+		_, _, err = tx.Set(fmt.Sprintf(KeyUserInfo, ui.ID), uiString, nil)
+		if err != nil {
+			return err
+		}
+		_, _, err = tx.Set(fmt.Sprintf(KeyUserPermissions, ui.ID), upString, nil)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return updateErr
 }
 
 func (ds *DataStore) AuthUser(username string, password string) (*ircbnc.User, error) {
@@ -100,20 +148,71 @@ func (ds *DataStore) AuthUser(username string, password string) (*ircbnc.User, e
 	return ds.GetUserById(username), nil
 }
 
-func (ds *DataStore) SetUserPassword(userId string, newPassord string) {
-	// TODO: Hash + store the new password
+func (ds *DataStore) SetUserPassword(user *ircbnc.User, newPassword string) {
+	userSalt := NewSalt()
+	passHash, _ := GenerateFromPassword(ds.salt, userSalt, newPassword)
+
+	user.Salt = userSalt
+	user.HashedPassword = passHash
 }
 
 func (ds *DataStore) GetUserNetworks(userId string) {
 	// TODO: Return a slice of network objects of some kind
 }
 
-func (ds *DataStore) AddUserNetwork(userId string, netName string) {
-	// TODO: Return a new network object of some kind
-}
+func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
+	// Store server info
+	sc := ServerConnectionInfo{
+		Name:             connection.Name,
+		Enabled:          true,
+		ConnectPassword:  connection.Password,
+		Nickname:         connection.Nickname,
+		NicknameFallback: connection.FbNickname,
+		Username:         connection.Username,
+		Realname:         connection.Realname,
+	}
+	scBytes, err := json.Marshal(sc)
+	if err != nil {
+		return fmt.Errorf("Error marshalling user info: %s", err.Error())
+	}
+	scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
 
-func (ds *DataStore) SaveNetwork(userId string, netName string) {
-	// TODO: Return a new network object of some kind
+	// Store server addresses
+	saBytes, err := json.Marshal(connection.Addresses)
+	if err != nil {
+		return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+	}
+	saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
+
+	// Store server channels (Convert the string map to a slice)
+	scChannels := []ircbnc.ServerConnectionChannel{}
+	for _, channel := range connection.Channels {
+		scChannels = append(scChannels, channel)
+	}
+	scChanBytes, err := json.Marshal(scChannels)
+	if err != nil {
+		return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
+	}
+	scChanString := string(scChanBytes) //TODO(dan): Should we do this in a safer way?
+
+	saveErr := ds.Db.Update(func(tx *buntdb.Tx) error {
+		var err error
+		_, _, err = tx.Set(fmt.Sprintf(KeyServerConnectionInfo, connection.User.ID, connection.Name), scString, nil)
+		if err != nil {
+			return err
+		}
+		_, _, err = tx.Set(fmt.Sprintf(KeyServerConnectionAddresses, connection.User.ID, connection.Name), saString, nil)
+		if err != nil {
+			return err
+		}
+		_, _, err = tx.Set(fmt.Sprintf(KeyServerConnectionChannels, connection.User.ID, connection.Name), scChanString, nil)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return saveErr
 }
 
 func (ds *DataStore) loadUser(tx *buntdb.Tx, userId string) (*ircbnc.User, error) {
