@@ -1,6 +1,7 @@
 package bncComponentControl
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/goshuirc/bnc/lib"
@@ -38,6 +39,8 @@ func onMessage(hook interface{}) {
 	switch command {
 	case "listnetworks":
 		commandListNetworks(listener, params, msg)
+	case "addnetwork":
+		commandAddNetwork(listener, params, msg)
 	}
 }
 
@@ -54,4 +57,61 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 	}
 
 	table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
+}
+
+func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	sendUsage := func() {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Usage: addnetwork name address [port] [password]")
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "To use SSL/TLS, add + infront of the port number.")
+	}
+
+	if len(params) < 2 {
+		sendUsage()
+		return
+	}
+
+	netName := params[0]
+	netAddress := params[1]
+	netPort := 6667
+	netTls := false
+	netPassword := ""
+
+	if len(params) >= 3 {
+		portParam := params[2]
+		if len(portParam) > 2 && portParam[:1] == "+" {
+			netTls = true
+			portParam = portParam[1:]
+		}
+		netPort, _ = strconv.Atoi(portParam)
+	}
+
+	if len(params) >= 4 {
+		netPassword = params[3]
+	}
+
+	if netName == "" || netAddress == "" || netPort == 0 {
+		sendUsage()
+		return
+	}
+
+	connection := ircbnc.NewServerConnection()
+	connection.User = listener.User
+	connection.Name = netName
+	connection.Password = netPassword
+
+	newAddress := ircbnc.ServerConnectionAddress{
+		Host:      netAddress,
+		Port:      netPort,
+		UseTLS:    netTls,
+		VerifyTLS: false,
+	}
+	connection.Addresses = append(connection.Addresses, newAddress)
+	listener.User.Networks[connection.Name] = connection
+
+	err := listener.Manager.Ds.SaveConnection(connection)
+	if err != nil {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Could not save the new network")
+	} else {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "New network saved")
+	}
 }
