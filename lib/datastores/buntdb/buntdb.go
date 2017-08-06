@@ -80,10 +80,9 @@ func (ds *DataStore) LoadSalt() error {
 func (ds *DataStore) GetAllUsers() []*ircbnc.User {
 	userIds := []string{}
 	users := []*ircbnc.User{}
-	println("Getting all users...")
+
 	ds.Db.View(func(tx *buntdb.Tx) error {
 		tx.DescendKeys("user.info *", func(key, value string) bool {
-			println(key)
 			userIds = append(userIds, strings.TrimPrefix(key, "user.info "))
 			return true
 		})

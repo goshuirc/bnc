@@ -41,9 +41,11 @@ Options:
 		log.Fatal("Config file did not load successfully:", err.Error())
 	}
 
-	data := getDataStoreInstance(config)
+	data, dataType := getDataStoreInstance(config)
 	if data == nil {
 		log.Fatal("No valid storage engines have been confugured")
+	} else {
+		log.Println("Using storage " + dataType)
 	}
 
 	manager := ircbnc.NewManager(config, data)
@@ -74,7 +76,7 @@ Options:
 	}
 }
 
-func getDataStoreInstance(config *ircbnc.Config) ircbnc.DataStoreInterface {
+func getDataStoreInstance(config *ircbnc.Config) (ircbnc.DataStoreInterface, string) {
 	var data ircbnc.DataStoreInterface
 
 	storageType, _ := config.Bouncer.Storage["type"]
@@ -85,6 +87,5 @@ func getDataStoreInstance(config *ircbnc.Config) ircbnc.DataStoreInterface {
 	if storageType == "buntdb" {
 		data = &bncDataStoreBuntdb.DataStore{}
 	}
-
-	return data
+	return data, storageType
 }

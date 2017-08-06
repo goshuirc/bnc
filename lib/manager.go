@@ -70,7 +70,6 @@ func (m *Manager) Run() error {
 	users := m.Ds.GetAllUsers()
 	for _, user := range users {
 		m.Users[user.ID] = user
-		println("Found user " + user.ID)
 		m.Users[user.ID].StartServerConnections(scReactor)
 	}
 
