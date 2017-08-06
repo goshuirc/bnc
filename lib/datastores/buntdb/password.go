@@ -38,7 +38,12 @@ func GenerateFromPassword(bncSalt []byte, specialSalt []byte, password string) (
 
 // CompareHashAndPassword compares an ircbnc hashed password with its possible plaintext equivalent.
 // Returns nil on success, or an error on failure.
-func CompareHashAndPassword(hashedPassword []byte, bncSalt []byte, specialSalt []byte, password string) error {
+func CompareHashAndPassword(hashedPassword []byte, bncSalt []byte, specialSalt []byte, password string) bool {
 	assembledPasswordBytes := assemblePassword(bncSalt, specialSalt, password)
-	return bcrypt.CompareHashAndPassword(hashedPassword, assembledPasswordBytes)
+	err := bcrypt.CompareHashAndPassword(hashedPassword, assembledPasswordBytes)
+	if err == nil {
+		return true
+	}
+
+	return false
 }

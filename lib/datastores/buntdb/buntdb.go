@@ -47,6 +47,8 @@ func (ds *DataStore) Setup() error {
 		return nil
 	})
 
+	ds.salt = bncSalt
+
 	return err
 }
 
@@ -150,8 +152,16 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 }
 
 func (ds *DataStore) AuthUser(username string, password string) (string, bool) {
-	// Todo: actually password checking
-	// ds.GetUserById(username)
+	user := ds.GetUserById(username)
+	if user == nil {
+		return "", false
+	}
+
+	passMatches := CompareHashAndPassword(user.HashedPassword, ds.salt, user.Salt, password)
+	if !passMatches {
+		return "", false
+	}
+
 	return username, true
 }
 
