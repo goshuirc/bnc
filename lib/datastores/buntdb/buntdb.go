@@ -98,7 +98,13 @@ func (ds *DataStore) GetAllUsers() []*ircbnc.User {
 }
 
 func (ds *DataStore) GetUserById(id string) *ircbnc.User {
-	return &ircbnc.User{}
+	var user *ircbnc.User
+	ds.Db.View(func(tx *buntdb.Tx) error {
+		user, _ = ds.loadUser(tx, id)
+		return nil
+	})
+
+	return user
 }
 
 func (ds *DataStore) SaveUser(user *ircbnc.User) error {
@@ -143,9 +149,10 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 	return updateErr
 }
 
-func (ds *DataStore) AuthUser(username string, password string) (*ircbnc.User, error) {
+func (ds *DataStore) AuthUser(username string, password string) (string, bool) {
 	// Todo: actually password checking
-	return ds.GetUserById(username), nil
+	// ds.GetUserById(username)
+	return username, true
 }
 
 func (ds *DataStore) SetUserPassword(user *ircbnc.User, newPassword string) {

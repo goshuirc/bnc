@@ -75,19 +75,19 @@ func loadClientCommands() {
 				userid = splitString[0]
 			}
 
-			user, loginErr := listener.Manager.Ds.AuthUser(userid, password)
-			if loginErr != nil {
+			authedUserId, authSuccess := listener.Manager.Ds.AuthUser(userid, password)
+			if !authSuccess {
 				listener.Send(nil, "", "ERROR", "Invalid username or password")
 				return true
 			}
 
-			// We want to use our existing User instance
-			listener.User = listener.Manager.Users[user.ID]
+			user := listener.Manager.Users[authedUserId]
+			listener.User = user
 			network, netExists := user.Networks[networkID]
 			if netExists {
 				network.AddListener(listener)
 			} else {
-				log.Println("Network doesnt exist")
+				log.Println("Network '" + networkID + "' doesnt exist")
 				listener.regLocks["LISTENER"] = true
 				listener.tryRegistration()
 			}

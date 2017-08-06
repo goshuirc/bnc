@@ -7,7 +7,7 @@ type DataStoreInterface interface {
 	GetUserById(id string) *User
 	SaveUser(*User) error
 	SetUserPassword(user *User, newPassword string)
-	AuthUser(username string, password string) (*User, error)
+	AuthUser(username string, password string) (authedUserId string, authSuccess bool)
 	GetUserNetworks(userId string)
 	SaveConnection(connection *ServerConnection) error
 }
