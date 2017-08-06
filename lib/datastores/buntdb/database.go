@@ -48,8 +48,8 @@ type UserInfo struct {
 // UserPermissions is a list of permissions the user has access to
 type UserPermissions []string
 
-// ServerConnectionInfo stores info about a user's specific server connection
-type ServerConnectionInfo struct {
+// ServerConnectionMapping maps ServerConnection to its JSON structure
+type ServerConnectionMapping struct {
 	Name             string
 	Enabled          bool
 	ConnectPassword  string `json:"connect-password"`
@@ -57,6 +57,21 @@ type ServerConnectionInfo struct {
 	NicknameFallback string
 	Username         string
 	Realname         string
+}
+
+// ServerConnectionAddressMapping maps ServerConnectionAddress to its JSON structure
+type ServerConnectionAddressMapping struct {
+	Host      string
+	Port      int
+	UseTLS    bool `json:"use-tls"`
+	VerifyTLS bool `json:"verify-tls"`
+}
+
+// ServerConnectionChannelMapping maps ServerConnectionChannel to its JSON structure
+type ServerConnectionChannelMapping struct {
+	Name   string
+	Key    string
+	UseKey bool `json:"use-key"`
 }
 
 // InitDB creates the database.

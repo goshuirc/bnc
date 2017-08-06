@@ -179,7 +179,7 @@ func (ds *DataStore) GetUserNetworks(userId string) {
 
 func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	// Store server info
-	sc := ServerConnectionInfo{
+	sc := ServerConnectionMapping{
 		Name:             connection.Name,
 		Enabled:          true,
 		ConnectPassword:  connection.Password,
@@ -295,7 +295,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 	sc.User = user
 
 	// load general info
-	scInfo := &ServerConnectionInfo{}
+	scInfo := &ServerConnectionMapping{}
 	scInfoString, err := tx.Get(fmt.Sprintf(KeyServerConnectionInfo, user.ID, name))
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc details from db): %s", err.Error())
@@ -332,7 +332,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc channels from db): %s", err.Error())
 	}
 
-	scChans := &ircbnc.ServerConnectionChannels{}
+	scChans := &[]ServerConnectionChannelMapping{}
 	err = json.Unmarshal([]byte(scChannelString), scChans)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
@@ -354,7 +354,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc addresses from db): %s", err.Error())
 	}
 
-	scAddresses := &ircbnc.ServerConnectionAddresses{}
+	scAddresses := &[]ServerConnectionAddressMapping{}
 	err = json.Unmarshal([]byte(scAddressesString), scAddresses)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc addresses): %s", err.Error())
@@ -366,7 +366,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 			return nil, fmt.Errorf("Could not create new ServerConnection (port %d is not valid)", address.Port)
 		}
 
-		sc.Addresses = append(sc.Addresses, address)
+		sc.Addresses = append(sc.Addresses, ircbnc.ServerConnectionAddress(address))
 	}
 
 	return sc, nil

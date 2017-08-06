@@ -54,8 +54,8 @@ func NewServerConnection() *ServerConnection {
 type ServerConnectionAddress struct {
 	Host      string
 	Port      int
-	UseTLS    bool `json:"use-tls"`
-	VerifyTLS bool `json:"verify-tls"`
+	UseTLS    bool
+	VerifyTLS bool
 }
 
 type ServerConnectionAddresses []ServerConnectionAddress
@@ -63,7 +63,7 @@ type ServerConnectionAddresses []ServerConnectionAddress
 type ServerConnectionChannel struct {
 	Name   string
 	Key    string
-	UseKey bool `json:"use-key"`
+	UseKey bool
 }
 
 type ServerConnectionChannels []ServerConnectionChannel
