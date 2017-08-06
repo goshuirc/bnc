@@ -23,7 +23,7 @@ func main() {
 GoshuBNC is an IRC bouncer.
 
 Usage:
-	bnc initdb [--conf <filename>]
+	bnc init [--conf <filename>]
 	bnc start [--conf <filename>]
 	bnc -h | --help
 	bnc --version
@@ -49,7 +49,7 @@ Options:
 		log.Fatalln(dataErr.Error())
 	}
 
-	if arguments["initdb"].(bool) {
+	if arguments["init"].(bool) {
 		setupErr := data.Setup()
 		if setupErr != nil {
 			log.Fatal("Could not initialise the database: ", err.Error())
