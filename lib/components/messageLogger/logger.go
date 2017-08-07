@@ -9,8 +9,6 @@ import (
 var stores []MessageDatastore
 
 func Run(manager *ircbnc.Manager) {
-	log.Println("Starting logger")
-
 	for logType, logConf := range manager.Config.Bouncer.Logging {
 		if logType == "file" {
 			log.Println("Starting message logger: " + logType)

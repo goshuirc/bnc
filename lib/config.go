@@ -35,7 +35,7 @@ func (conf *TLSListenConfig) Config() (*tls.Config, error) {
 // Config defines a configuration file for GoshuBNC
 type Config struct {
 	Bouncer struct {
-		DatabasePath string `yaml:"database-path"`
+		Storage      map[string]string
 		Listeners    []string
 		TLSListeners map[string]*TLSListenConfig `yaml:"tls-listeners"`
 		Logging      map[string]map[string]string
@@ -67,9 +67,6 @@ func LoadConfig(filename string) (config *Config, err error) {
 		return nil, err
 	}
 
-	if config.Bouncer.DatabasePath == "" {
-		return nil, errors.New("Database path is missing")
-	}
 	if len(config.Bouncer.Listeners) == 0 {
 		return nil, errors.New("No listeners are defined")
 	}

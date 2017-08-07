@@ -1,7 +1,7 @@
 // Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
 // released under the MIT license
 
-package ircbnc
+package bncDataStoreBuntdb
 
 import (
 	"crypto/rand"
@@ -13,16 +13,10 @@ const newSaltLen = 30
 const defaultPasswordCost = 14
 
 // NewSalt returns a salt for crypto uses.
-func NewSalt() ([]byte, error) {
+func NewSalt() []byte {
 	salt := make([]byte, newSaltLen)
-	_, err := rand.Read(salt)
-
-	if err != nil {
-		var emptySalt []byte
-		return emptySalt, err
-	}
-
-	return salt, nil
+	rand.Read(salt)
+	return salt
 }
 
 // assemblePassword returns an assembled slice of bytes for the given password details.
@@ -44,7 +38,12 @@ func GenerateFromPassword(bncSalt []byte, specialSalt []byte, password string) (
 
 // CompareHashAndPassword compares an ircbnc hashed password with its possible plaintext equivalent.
 // Returns nil on success, or an error on failure.
-func CompareHashAndPassword(hashedPassword []byte, bncSalt []byte, specialSalt []byte, password string) error {
+func CompareHashAndPassword(hashedPassword []byte, bncSalt []byte, specialSalt []byte, password string) bool {
 	assembledPasswordBytes := assemblePassword(bncSalt, specialSalt, password)
-	return bcrypt.CompareHashAndPassword(hashedPassword, assembledPasswordBytes)
+	err := bcrypt.CompareHashAndPassword(hashedPassword, assembledPasswordBytes)
+	if err == nil {
+		return true
+	}
+
+	return false
 }

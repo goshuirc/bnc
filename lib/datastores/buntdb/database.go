@@ -2,7 +2,7 @@
 // Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
 // released under the MIT license
 
-package ircbnc
+package bncDataStoreBuntdb
 
 import (
 	"encoding/base64"
@@ -48,8 +48,9 @@ type UserInfo struct {
 // UserPermissions is a list of permissions the user has access to
 type UserPermissions []string
 
-// ServerConnectionInfo stores info about a user's specific server connection
-type ServerConnectionInfo struct {
+// ServerConnectionMapping maps ServerConnection to its JSON structure
+type ServerConnectionMapping struct {
+	Name             string
 	Enabled          bool
 	ConnectPassword  string `json:"connect-password"`
 	Nickname         string
@@ -58,22 +59,20 @@ type ServerConnectionInfo struct {
 	Realname         string
 }
 
-type ServerConnectionAddress struct {
+// ServerConnectionAddressMapping maps ServerConnectionAddress to its JSON structure
+type ServerConnectionAddressMapping struct {
 	Host      string
 	Port      int
 	UseTLS    bool `json:"use-tls"`
 	VerifyTLS bool `json:"verify-tls"`
 }
 
-type ServerConnectionAddresses []ServerConnectionAddress
-
-type ServerConnectionChannel struct {
+// ServerConnectionChannelMapping maps ServerConnectionChannel to its JSON structure
+type ServerConnectionChannelMapping struct {
 	Name   string
 	Key    string
 	UseKey bool `json:"use-key"`
 }
-
-type ServerConnectionChannels []ServerConnectionChannel
 
 // InitDB creates the database.
 func InitDB(path string) {
@@ -88,7 +87,7 @@ func InitDB(path string) {
 
 	err = store.Update(func(tx *buntdb.Tx) error {
 		// set base db salt
-		salt, err := NewSalt()
+		salt := NewSalt()
 		encodedSalt := base64.StdEncoding.EncodeToString(salt)
 		if err != nil {
 			log.Fatal("Could not generate cryptographically-secure salt for the database:", err.Error())

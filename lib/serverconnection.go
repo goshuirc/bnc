@@ -12,20 +12,18 @@ import (
 	"strconv"
 	"strings"
 
-	"encoding/json"
-
 	"github.com/goshuirc/eventmgr"
 	"github.com/goshuirc/irc-go/client"
 	"github.com/goshuirc/irc-go/ircfmt"
 	"github.com/goshuirc/irc-go/ircmsg"
-	"github.com/tidwall/buntdb"
 )
 
 // ServerConnection represents a connection to an IRC server.
 type ServerConnection struct {
 	Name      string
-	User      User
+	User      *User
 	Connected bool
+	Enabled   bool
 
 	Nickname   string
 	FbNickname string
@@ -45,92 +43,30 @@ type ServerConnection struct {
 	Addresses []ServerConnectionAddress
 }
 
-// LoadServerConnection loads the given server connection from our database.
-func LoadServerConnection(name string, user User, tx *buntdb.Tx) (*ServerConnection, error) {
-	var sc ServerConnection
-	sc.storingConnectMessages = true
-	sc.receiveLines = make(chan *string)
-	sc.ReceiveEvents = make(chan Message)
-	sc.Name = name
-	sc.User = user
-
-	// load general info
-	scInfo := &ServerConnectionInfo{}
-	scInfoString, err := tx.Get(fmt.Sprintf(KeyServerConnectionInfo, user.ID, name))
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc details from db): %s", err.Error())
+func NewServerConnection() *ServerConnection {
+	return &ServerConnection{
+		storingConnectMessages: true,
+		receiveLines:           make(chan *string),
+		ReceiveEvents:          make(chan Message),
 	}
-
-	err = json.Unmarshal([]byte(scInfoString), scInfo)
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc details): %s", err.Error())
-	}
-
-	sc.Nickname = scInfo.Nickname
-	sc.FbNickname = scInfo.NicknameFallback
-	sc.Username = scInfo.Username
-	sc.Realname = scInfo.Realname
-	sc.Password = scInfo.ConnectPassword
-
-	// set default values
-	if sc.Nickname == "" {
-		sc.Nickname = user.DefaultNick
-	}
-	if sc.FbNickname == "" {
-		sc.FbNickname = user.DefaultFbNick
-	}
-	if sc.Username == "" {
-		sc.Username = user.DefaultUser
-	}
-	if sc.Realname == "" {
-		sc.Realname = user.DefaultReal
-	}
-
-	// load channels
-	scChannelString, err := tx.Get(fmt.Sprintf(KeyServerConnectionChannels, user.ID, name))
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc channels from db): %s", err.Error())
-	}
-
-	scChans := &ServerConnectionChannels{}
-	err = json.Unmarshal([]byte(scChannelString), scChans)
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
-	}
-
-	sc.Channels = make(map[string]ServerConnectionChannel)
-	for _, channel := range *scChans {
-		sc.Channels[channel.Name] = ServerConnectionChannel{
-			Name:   channel.Name,
-			Key:    channel.Key,
-			UseKey: channel.UseKey,
-		}
-
-	}
-
-	// load addresses
-	scAddressesString, err := tx.Get(fmt.Sprintf(KeyServerConnectionAddresses, user.ID, name))
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc addresses from db): %s", err.Error())
-	}
-
-	scAddresses := &ServerConnectionAddresses{}
-	err = json.Unmarshal([]byte(scAddressesString), scAddresses)
-	if err != nil {
-		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc addresses): %s", err.Error())
-	}
-
-	// check port number and add addresses
-	for _, address := range *scAddresses {
-		if address.Port < 1 || address.Port > 65535 {
-			return nil, fmt.Errorf("Could not create new ServerConnection (port %d is not valid)", address.Port)
-		}
-
-		sc.Addresses = append(sc.Addresses, address)
-	}
-
-	return &sc, nil
 }
+
+type ServerConnectionAddress struct {
+	Host      string
+	Port      int
+	UseTLS    bool
+	VerifyTLS bool
+}
+
+type ServerConnectionAddresses []ServerConnectionAddress
+
+type ServerConnectionChannel struct {
+	Name   string
+	Key    string
+	UseKey bool
+}
+
+type ServerConnectionChannels []ServerConnectionChannel
 
 //TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{
@@ -167,7 +103,7 @@ func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) 
 
 	hook := &HookIrcRaw{
 		FromServer: true,
-		User:       &sc.User,
+		User:       sc.User,
 		Server:     sc,
 		Raw:        line,
 		Message:    msg,

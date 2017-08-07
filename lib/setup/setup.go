@@ -5,7 +5,6 @@ package ircsetup
 
 import (
 	"bufio"
-	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -15,11 +14,8 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"encoding/json"
-
 	"github.com/fatih/color"
 	"github.com/goshuirc/bnc/lib"
-	"github.com/tidwall/buntdb"
 )
 
 var (
@@ -106,50 +102,44 @@ func Error(text string) {
 }
 
 // InitialSetup performs the initial GoshuBNC setup
-func InitialSetup(db *buntdb.DB) {
+func InitialSetup(manager *ircbnc.Manager) {
 	fmt.Println(CbBlue("["), CbCyan("~~"), CbBlue("]"), "Welcome to", CbCyan("GoshuBNC"))
 	Note("We will now run through basic setup.")
 
+	data := manager.Ds
 	var err error
 
-	// generate bouncer salt
-	bncSalt, err := ircbnc.NewSalt()
-	encodedBncSalt := base64.StdEncoding.EncodeToString(bncSalt)
-	err = db.Update(func(tx *buntdb.Tx) error {
-		tx.Set(ircbnc.KeySalt, encodedBncSalt, nil)
-		return nil
-	})
+	data.Setup()
 
 	Section("Admin user settings")
 	var username string
-	var goodUsername string
+	var password string
+
+	var ircNick string
+	var ircFbNick string // fallback nick
+	var ircUser string
+	var ircReal string
+
 	for {
-		username, err = Query("Username: ")
+		inputUsername, err := Query("Username: ")
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
-		username = strings.TrimSpace(username)
-
-		goodUsername, err = ircbnc.BncName(username)
+		inputUsername = strings.TrimSpace(inputUsername)
+		inputUsername, err = ircbnc.BncName(inputUsername)
 		if err == nil {
-			Note(fmt.Sprintf("Username is %s. Will be stored internally as %s.", username, goodUsername))
+			username = inputUsername
+			Note(fmt.Sprintf("Username is %s.", username))
 			break
 		} else {
 			Error(err.Error())
 		}
 	}
 
-	// generate our salts
-	userSalt, err := ircbnc.NewSalt()
-	encodedUserSalt := base64.StdEncoding.EncodeToString(userSalt)
-	if err != nil {
-		log.Fatal("Could not generate cryptographically-secure salt for the user:", err.Error())
-	}
-
-	var encodedPassHash string
+	// Read the password
 	for {
-		password, err := QueryNoEcho("Enter password: ")
+		newPassword, err := QueryNoEcho("Enter password: ")
 
 		if err != nil {
 			Error(fmt.Sprintf("Error reading input line: %s", err.Error()))
@@ -163,26 +153,18 @@ func InitialSetup(db *buntdb.DB) {
 			continue
 		}
 
-		if password != passwordCompare {
+		if newPassword != passwordCompare {
 			Warn("The supplied passwords do not match")
 			continue
 		}
 
-		passHash, err := ircbnc.GenerateFromPassword(bncSalt, userSalt, password)
-		encodedPassHash = base64.StdEncoding.EncodeToString(passHash)
-
-		if err == nil {
-			break
-		} else {
-			Error(fmt.Sprintf("Could not generate password: %s", err.Error()))
-			continue
-		}
+		password = newPassword
+		break
 	}
 
-	// get IRC details
-	var ircNick string
+	// Get IRC details
 	for {
-		ircNick, err = QueryDefault(fmt.Sprintf("Enter Nickname [%s]: ", goodUsername), goodUsername)
+		ircNick, err = QueryDefault(fmt.Sprintf("Enter Nickname [%s]: ", username), username)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -195,7 +177,6 @@ func InitialSetup(db *buntdb.DB) {
 		}
 	}
 
-	var ircFbNick string
 	defaultFallbackNick := fmt.Sprintf("%s_", ircNick)
 	for {
 		ircFbNick, err = QueryDefault(fmt.Sprintf("Enter Fallback Nickname [%s]: ", defaultFallbackNick), defaultFallbackNick)
@@ -211,9 +192,8 @@ func InitialSetup(db *buntdb.DB) {
 		}
 	}
 
-	var ircUser string
 	for {
-		ircUser, err = QueryDefault(fmt.Sprintf("Enter Username [%s]: ", goodUsername), goodUsername)
+		ircUser, err = QueryDefault(fmt.Sprintf("Enter Username [%s]: ", username), username)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -226,44 +206,23 @@ func InitialSetup(db *buntdb.DB) {
 		}
 	}
 
-	var ircReal string
 	ircReal, err = Query("Enter Realname: ")
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	err = db.Update(func(tx *buntdb.Tx) error {
-		// store user info
-		ui := ircbnc.UserInfo{
-			ID:                  goodUsername,
-			Role:                "Owner",
-			EncodedSalt:         encodedUserSalt,
-			EncodedPasswordHash: encodedPassHash,
-			DefaultNick:         ircNick,
-			DefaultNickFallback: ircFbNick,
-			DefaultUsername:     ircUser,
-			DefaultRealname:     ircReal,
-		}
-		uiBytes, err := json.Marshal(ui)
-		if err != nil {
-			return fmt.Errorf("Error marshalling user info: %s", err.Error())
-		}
-		uiString := string(uiBytes) //TODO(dan): Should we do this in a safer way?
+	user := ircbnc.NewUser(manager)
+	// TODO: ID should only be set by the datastore
+	user.ID = username
+	user.Role = "Owner"
+	user.DefaultNick = ircNick
+	user.DefaultFbNick = ircFbNick
+	user.DefaultUser = ircUser
+	user.DefaultReal = ircReal
+	user.Permissions = []string{"*"}
+	data.SetUserPassword(user, password)
 
-		tx.Set(fmt.Sprintf(ircbnc.KeyUserInfo, goodUsername), uiString, nil)
-
-		// store user permissions
-		up := ircbnc.UserPermissions{"*"}
-		upBytes, err := json.Marshal(up)
-		if err != nil {
-			return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
-		}
-		upString := string(upBytes) //TODO(dan): Should we do this in a safer way?
-
-		tx.Set(fmt.Sprintf(ircbnc.KeyUserPermissions, goodUsername), upString, nil)
-		return nil
-	})
-
+	err = data.SaveUser(user)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Could not create user info in database: %s", err.Error()))
 		return
@@ -385,49 +344,22 @@ func InitialSetup(db *buntdb.DB) {
 			break
 		}
 
-		err = db.Update(func(tx *buntdb.Tx) error {
-			// store server info
-			sc := ircbnc.ServerConnectionInfo{
-				Enabled:         true,
-				ConnectPassword: serverPass,
-			}
-			scBytes, err := json.Marshal(sc)
-			if err != nil {
-				return fmt.Errorf("Error marshalling user info: %s", err.Error())
-			}
-			scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
+		connection := ircbnc.NewServerConnection()
+		connection.User = user
+		connection.Name = goodNetName
+		connection.Password = serverPass
+		newAddress := ircbnc.ServerConnectionAddress{
+			Host:      serverAddress,
+			Port:      serverPort,
+			UseTLS:    serverUseTLS,
+			VerifyTLS: serverVerifyTLS,
+		}
+		connection.Addresses = append(connection.Addresses, newAddress)
+		for _, channel := range serverChannels {
+			connection.Channels[channel.Name] = channel
+		}
 
-			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionInfo, goodUsername, goodNetName), scString, nil)
-
-			// store server addresses
-			sa := ircbnc.ServerConnectionAddresses{
-				ircbnc.ServerConnectionAddress{
-					Host:      serverAddress,
-					Port:      serverPort,
-					UseTLS:    serverUseTLS,
-					VerifyTLS: serverVerifyTLS,
-				},
-			}
-			saBytes, err := json.Marshal(sa)
-			if err != nil {
-				return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
-			}
-			saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
-
-			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionAddresses, goodUsername, goodNetName), saString, nil)
-
-			// store server channels
-			scChannels := ircbnc.ServerConnectionChannels(serverChannels)
-			scChanBytes, err := json.Marshal(scChannels)
-			if err != nil {
-				return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
-			}
-			scChanString := string(scChanBytes) //TODO(dan): Should we do this in a safer way?
-
-			tx.Set(fmt.Sprintf(ircbnc.KeyServerConnectionChannels, goodUsername, goodNetName), scChanString, nil)
-			return nil
-		})
-
+		err = data.SaveConnection(connection)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Could not create server connection [%s] in database: %s", goodNetName, err.Error()))
 			return

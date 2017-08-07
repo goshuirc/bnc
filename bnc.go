@@ -10,10 +10,11 @@ import (
 	"github.com/docopt/docopt-go"
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/bnc/lib/setup"
-	"github.com/tidwall/buntdb"
 
 	// Different parts of the project acting independantly
 	"github.com/goshuirc/bnc/lib/components/componentLoader"
+
+	"github.com/goshuirc/bnc/lib/datastores/buntdb"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 GoshuBNC is an IRC bouncer.
 
 Usage:
-	bnc initdb [--conf <filename>]
+	bnc init [--conf <filename>]
 	bnc start [--conf <filename>]
 	bnc -h | --help
 	bnc --version
@@ -40,25 +41,30 @@ Options:
 		log.Fatal("Config file did not load successfully:", err.Error())
 	}
 
-	if arguments["initdb"].(bool) {
-		ircbnc.InitDB(config.Bouncer.DatabasePath)
+	data, dataType := getDataStoreInstance(config)
+	if data == nil {
+		log.Fatal("No valid storage engines have been confugured")
+	} else {
+		log.Println("Using storage " + dataType)
+	}
 
-		db, err := buntdb.Open(config.Bouncer.DatabasePath)
-		if err != nil {
-			log.Fatal("Could not open DB:", err.Error())
+	manager := ircbnc.NewManager(config, data)
+
+	dataErr := data.Init(manager)
+	if dataErr != nil {
+		log.Fatalln(dataErr.Error())
+	}
+
+	if arguments["init"].(bool) {
+		setupErr := data.Setup()
+		if setupErr != nil {
+			log.Fatal("Could not initialise the database: ", err.Error())
 		}
-		ircsetup.InitialSetup(db)
+
+		ircsetup.InitialSetup(manager)
+
 	} else if arguments["start"].(bool) {
 		fmt.Println("Starting", ircsetup.CbCyan("GoshuBNC"))
-
-		db, err := buntdb.Open(config.Bouncer.DatabasePath)
-		if err != nil {
-			log.Fatal("Could not open DB:", err.Error())
-		}
-		manager, err := ircbnc.NewManager(config, db)
-		if err != nil {
-			log.Fatal("Could not create manager:", err.Error())
-		}
 
 		// Start the different components
 		bncComponentLoader.Run(manager)
@@ -68,4 +74,18 @@ Options:
 			log.Fatal(err.Error())
 		}
 	}
+}
+
+func getDataStoreInstance(config *ircbnc.Config) (ircbnc.DataStoreInterface, string) {
+	var data ircbnc.DataStoreInterface
+
+	storageType, _ := config.Bouncer.Storage["type"]
+	if storageType == "" {
+		storageType = "buntdb"
+	}
+
+	if storageType == "buntdb" {
+		data = &bncDataStoreBuntdb.DataStore{}
+	}
+	return data, storageType
 }
