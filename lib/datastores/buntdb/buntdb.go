@@ -113,11 +113,16 @@ func (ds *DataStore) GetUserById(id string) *ircbnc.User {
 	return user
 }
 
+func (ds *DataStore) GetUserByUsername(username string) *ircbnc.User {
+	// Since the IDs are just the usernames we can simply forward this on
+	return ds.GetUserById(strings.ToLower(username))
+}
+
 func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 	// TODO: If ID isn't set, set the ID now.
 	// An ID set = the user object was saved or retrieved from the db
 	ui := UserInfo{}
-	ui.ID = user.ID
+	ui.Name = user.Name
 	ui.Role = user.Role
 	ui.EncodedSalt = base64.StdEncoding.EncodeToString(user.Salt)
 	ui.EncodedPasswordHash = base64.StdEncoding.EncodeToString(user.HashedPassword)
@@ -125,6 +130,11 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 	ui.DefaultNickFallback = user.DefaultFbNick
 	ui.DefaultUsername = user.DefaultUser
 	ui.DefaultRealname = user.DefaultReal
+
+	// Just use the username as the ID
+	if user.ID == "" {
+		user.ID = strings.ToLower(user.Name)
+	}
 
 	uiBytes, err := json.Marshal(ui)
 	if err != nil {
@@ -156,7 +166,7 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 }
 
 func (ds *DataStore) AuthUser(username string, password string) (string, bool) {
-	user := ds.GetUserById(username)
+	user := ds.GetUserByUsername(username)
 	if user == nil {
 		return "", false
 	}
@@ -166,7 +176,7 @@ func (ds *DataStore) AuthUser(username string, password string) (string, bool) {
 		return "", false
 	}
 
-	return username, true
+	return user.ID, true
 }
 
 func (ds *DataStore) SetUserPassword(user *ircbnc.User, newPassword string) {

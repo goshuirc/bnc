@@ -212,8 +212,7 @@ func InitialSetup(manager *ircbnc.Manager) {
 	}
 
 	user := ircbnc.NewUser(manager)
-	// TODO: ID should only be set by the datastore
-	user.ID = username
+	user.Name = username
 	user.Role = "Owner"
 	user.DefaultNick = ircNick
 	user.DefaultFbNick = ircFbNick
