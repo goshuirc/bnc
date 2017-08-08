@@ -5,6 +5,7 @@ type DataStoreInterface interface {
 	Setup() error
 	GetAllUsers() []*User
 	GetUserById(id string) *User
+	GetUserByUsername(username string) *User
 	SaveUser(*User) error
 	SetUserPassword(user *User, newPassword string)
 	AuthUser(username string, password string) (authedUserId string, authSuccess bool)

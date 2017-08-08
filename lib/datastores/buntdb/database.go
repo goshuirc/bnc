@@ -36,6 +36,7 @@ const (
 // UserInfo stores information about the user in our database
 type UserInfo struct {
 	ID                  string
+	Name                string `json:"username"`
 	Role                string
 	EncodedSalt         string `json:"salt"`
 	EncodedPasswordHash string `json:"hash"`
