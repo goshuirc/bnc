@@ -161,7 +161,8 @@ func (listener *Listener) processIncomingLine(line string) bool {
 	}
 
 	if listener.Registered {
-		err := listener.ServerConnection.currentServer.Send(&msg.Tags, msg.Prefix, msg.Command, msg.Params...)
+		line, _ := msg.Line()
+		_, err := listener.ServerConnection.Foo.WriteLine(line)
 		if err != nil {
 			log.Println(err.Error())
 		}

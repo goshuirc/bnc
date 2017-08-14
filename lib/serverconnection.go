@@ -4,17 +4,11 @@
 package ircbnc
 
 import (
-	"bufio"
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net"
-	"strconv"
-	"strings"
 
-	"github.com/goshuirc/eventmgr"
-	"github.com/goshuirc/irc-go/client"
-	"github.com/goshuirc/irc-go/ircfmt"
+	"github.com/goshuirc/bnc/lib/ircclient"
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
@@ -36,11 +30,11 @@ type ServerConnection struct {
 
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
-	currentServer          *gircclient.ServerConnection
 	Listeners              []*Listener
 
 	Password  string
 	Addresses []ServerConnectionAddress
+	Foo       *ircclient.Client
 }
 
 func NewServerConnection() *ServerConnection {
@@ -48,6 +42,7 @@ func NewServerConnection() *ServerConnection {
 		storingConnectMessages: true,
 		receiveLines:           make(chan *string),
 		ReceiveEvents:          make(chan Message),
+		Foo:                    ircclient.NewClient(),
 	}
 }
 
@@ -89,24 +84,19 @@ var storedConnectLines = map[string]bool{
 }
 
 // disconnectHandler extracts and stores .
-func (sc *ServerConnection) disconnectHandler(event string, info eventmgr.InfoMap) {
-	sc.currentServer = nil
-
+func (sc *ServerConnection) disconnectHandler(message *ircmsg.IrcMessage) {
 	for _, listener := range sc.Listeners {
 		listener.Send(nil, listener.Manager.StatusSource, "PRIVMSG", "Disconnected from server")
 	}
 }
 
-func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) {
-	line := info["data"].(string)
-	msg, _ := ircmsg.ParseLine(line)
-
+func (sc *ServerConnection) rawToListeners(message *ircmsg.IrcMessage) {
 	hook := &HookIrcRaw{
 		FromServer: true,
 		User:       sc.User,
 		Server:     sc,
-		Raw:        line,
-		Message:    msg,
+		Raw:        message.SourceLine,
+		Message:    *message,
 	}
 	sc.User.Manager.Bus.Dispatch(HookIrcRawName, hook)
 	if hook.Halt {
@@ -115,27 +105,21 @@ func (sc *ServerConnection) rawToListeners(event string, info eventmgr.InfoMap) 
 
 	for _, listener := range sc.Listeners {
 		if listener.Registered {
-			listener.SendLine(line)
+			listener.SendLine(message.SourceLine)
 		}
 	}
 }
 
 // connectLinesHandler extracts and stores the connection lines.
-func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.InfoMap) {
-	if !sc.storingConnectMessages {
-		return
-	}
-
-	line := info["data"].(string)
-	message, err := ircmsg.ParseLine(line)
-	if err != nil {
+func (sc *ServerConnection) connectLinesHandler(message *ircmsg.IrcMessage) {
+	if !sc.storingConnectMessages || message == nil {
 		return
 	}
 
 	_, storeMessage := storedConnectLines[message.Command]
 	if storeMessage {
 		// fmt.Println("IN:", message)
-		sc.connectMessages = append(sc.connectMessages, message)
+		sc.connectMessages = append(sc.connectMessages, *message)
 	}
 
 	if message.Command == "376" || message.Command == "422" {
@@ -146,7 +130,7 @@ func (sc *ServerConnection) connectLinesHandler(event string, info eventmgr.Info
 // DumpRegistration dumps the registration messages of this server to the given Listener.
 func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 	// if server is not currently connected, just dump a nil connect
-	if sc.currentServer == nil {
+	if !sc.Foo.Connected {
 		listener.SendNilConnect()
 		return
 	}
@@ -158,80 +142,36 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 	}
 
 	// change nick if user has a different one set
-	if listener.ClientNick != sc.currentServer.Nick {
-		listener.Send(nil, listener.ClientNick, "NICK", sc.currentServer.Nick)
-		listener.ClientNick = sc.currentServer.Nick
+	if listener.ClientNick != sc.Foo.Nick {
+		listener.Send(nil, listener.ClientNick, "NICK", sc.Foo.Nick)
+		listener.ClientNick = sc.Foo.Nick
 	}
 }
 
 func (sc *ServerConnection) DumpChannels(listener *Listener) {
 	for channel := range sc.Channels {
 		//TODO(dan): add channel keys and enabled/disable bool here
-		listener.Send(nil, sc.currentServer.Nick, "JOIN", channel)
-		sc.currentServer.Send(nil, "", "NAMES", channel)
+		listener.Send(nil, sc.Foo.Nick, "JOIN", channel)
+		sc.Foo.WriteLine("NAMES %s", channel)
 	}
-}
-
-// rawHandler prints raw messages to and from the server.
-//TODO(dan): This is only VERY INITIAL, for use while we are debugging.
-func rawHandler(event string, info eventmgr.InfoMap) {
-	server := info["server"].(*gircclient.ServerConnection)
-	direction := info["direction"].(string)
-	line := info["data"].(string)
-
-	var arrow string
-	if direction == "in" {
-		arrow = "<- "
-	} else {
-		arrow = " ->"
-	}
-
-	fmt.Println(server.Name, arrow, ircfmt.Escape(strings.Trim(line, "\r\n")))
-}
-
-func (sc *ServerConnection) lineReceiveLoop(server *gircclient.ServerConnection) {
-	// wait for the connection to become available
-	server.WaitForConnection()
-
-	reader := bufio.NewReader(server.RawConnection)
-
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			sc.receiveLines <- nil
-			break
-		}
-
-		sc.receiveLines <- &line
-	}
-
-	server.Disconnect()
 }
 
 // ReceiveLoop runs a loop of receiving and dispatching new messages.
-func (sc *ServerConnection) ReceiveLoop(server *gircclient.ServerConnection) {
-	var msg Message
-	var line *string
+func (sc *ServerConnection) ReceiveLoop() {
 	for {
-		select {
-		case line = <-sc.receiveLines:
-			if line == nil {
-				continue
-			}
-			server.ProcessIncomingLine(*line)
-		case msg = <-sc.ReceiveEvents:
-			if msg.Type == AddListenerMT {
-				listener := msg.Info[ListenerIK].(*Listener)
-				sc.Listeners = append(sc.Listeners, listener)
-				listener.ServerConnection = sc
+		msg := <-sc.ReceiveEvents
 
-				// registration blocks on the listener being added, continue if we should
-				listener.regLocks["LISTENER"] = true
-				listener.tryRegistration()
-			} else {
-				log.Fatal("Got an event I cannot parse")
-				fmt.Println(msg)
-			}
+		if msg.Type == AddListenerMT {
+			listener := msg.Info[ListenerIK].(*Listener)
+			sc.Listeners = append(sc.Listeners, listener)
+			listener.ServerConnection = sc
+
+			// registration blocks on the listener being added, continue if we should
+			listener.regLocks["LISTENER"] = true
+			listener.tryRegistration()
+		} else {
+			log.Fatal("Got an event I cannot parse")
+			fmt.Println(msg)
 		}
 	}
 }
@@ -244,38 +184,36 @@ func (sc *ServerConnection) AddListener(listener *Listener) {
 }
 
 // Start opens and starts connecting to the server.
-func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
+func (sc *ServerConnection) Start() {
 	name := fmt.Sprintf("%s %s", sc.User.ID, sc.Name)
-	server := reactor.CreateServer(name)
-	sc.currentServer = server
 
-	server.InitialNick = sc.Nickname
-	server.InitialUser = sc.Username
-	server.InitialRealName = sc.Realname
-	server.ConnectionPass = sc.Password
-	server.FallbackNicks = append(server.FallbackNicks, sc.FbNickname)
+	sc.Foo.Nick = sc.Nickname
+	sc.Foo.Username = sc.Username
+	sc.Foo.Realname = sc.Realname
+	sc.Foo.Password = sc.Password
 
-	server.RegisterEvent("in", "raw", sc.connectLinesHandler, 0)
-	server.RegisterEvent("in", "raw", sc.rawToListeners, 0)
-	server.RegisterEvent("out", "server disconnected", sc.disconnectHandler, 0)
-	server.RegisterEvent("in", "JOIN", sc.handleJoin, 0)
-	server.RegisterEvent("in", "raw", rawHandler, 0)
-	server.RegisterEvent("out", "raw", rawHandler, 0)
+	sc.Foo.HandleCommand("ALL", sc.connectLinesHandler)
+	sc.Foo.HandleCommand("ALL", sc.rawToListeners)
+	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
+	sc.Foo.HandleCommand("JOIN", sc.handleJoin)
 
 	for _, channel := range sc.Channels {
-		server.JoinChannel(channel.Name, channel.Key, channel.UseKey)
+		sc.Foo.JoinChannel(channel.Name, channel.Key)
 	}
 
 	var err error
 	for _, address := range sc.Addresses {
-		fullAddress := net.JoinHostPort(address.Host, strconv.Itoa(address.Port))
+		sc.Foo.Host = address.Host
+		sc.Foo.Port = address.Port
+		sc.Foo.TLS = address.UseTLS
 
-		var tlsConfig tls.Config
+		tlsConfig := &tls.Config{}
 		if !address.VerifyTLS {
 			tlsConfig.InsecureSkipVerify = true
 		}
+		sc.Foo.TLSConfig = tlsConfig
 
-		err = server.Connect(fullAddress, address.UseTLS, &tlsConfig)
+		err := sc.Foo.Connect()
 		if err == nil {
 			break
 		}
@@ -286,12 +224,11 @@ func (sc *ServerConnection) Start(reactor gircclient.Reactor) {
 		return
 	}
 
-	go sc.lineReceiveLoop(server)
-	go sc.ReceiveLoop(server)
+	go sc.ReceiveLoop()
 }
 
-func (sc *ServerConnection) handleJoin(event string, info eventmgr.InfoMap) {
-	params := info["params"].([]string)
+func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
+	params := message.Params
 	if len(params) < 1 {
 		// invalid JOIN message
 		return

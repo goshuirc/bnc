@@ -3,10 +3,6 @@
 
 package ircbnc
 
-import (
-	"github.com/goshuirc/irc-go/client"
-)
-
 // User represents an ircbnc user.
 type User struct {
 	Manager *Manager
@@ -36,8 +32,8 @@ func NewUser(manager *Manager) *User {
 }
 
 // StartServerConnections starts running the server connections of this user.
-func (user *User) StartServerConnections(r gircclient.Reactor) {
+func (user *User) StartServerConnections() {
 	for _, sc := range user.Networks {
-		sc.Start(r)
+		sc.Start()
 	}
 }
