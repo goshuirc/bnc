@@ -133,7 +133,7 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 
 	// Just use the username as the ID
 	if user.ID == "" {
-		user.ID = strings.ToLower(user.Name)
+		ui.ID = strings.ToLower(user.Name)
 	}
 
 	uiBytes, err := json.Marshal(ui)
@@ -159,6 +159,9 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 		if err != nil {
 			return err
 		}
+
+		// Make sure the User instance has the uptodate ID
+		user.ID = ui.ID
 		return nil
 	})
 
