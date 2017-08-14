@@ -26,9 +26,23 @@ func loadServerCommands() {
 				if len(parts) == 1 {
 					client.Supported[parts[0]] = ""
 				} else {
-					client.Supported[parts[1]] = ""
+					client.Supported[parts[0]] = parts[1]
 				}
 			}
+		},
+	}
+
+	// ERR_NICKNAMEINUSE
+	ServerCommands["433"] = ServerCommand{
+		minParams: 0,
+		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+			if client.HasRegistered {
+				return
+			}
+
+			// TODO: This should use the fallback nick set ont he client
+			client.Nick = client.Nick + "_"
+			client.WriteLine("NICK %s", client.Nick)
 		},
 	}
 
@@ -36,6 +50,13 @@ func loadServerCommands() {
 		minParams: 1,
 		handler: func(client *Client, msg *ircmsg.IrcMessage) {
 			client.Nick = msg.Params[0]
+		},
+	}
+
+	ServerCommands["PING"] = ServerCommand{
+		minParams: 1,
+		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+			client.WriteLine("PONG :%s", msg.Params[0])
 		},
 	}
 

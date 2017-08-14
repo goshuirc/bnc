@@ -20,7 +20,11 @@ type Client struct {
 }
 
 func NewClient() *Client {
-	client := &Client{}
+	client := &Client{
+		Socket:           *NewSocket(),
+		Supported:        make(map[string]string),
+		CommandListeners: make(map[string][]func(*ircmsg.IrcMessage)),
+	}
 	go client.messageDispatcher()
 	return client
 }
@@ -31,8 +35,8 @@ func (client *Client) Connect() error {
 		return err
 	}
 
-	client.WriteLine("%s 0 * :%s", client.Username, client.Realname)
 	client.WriteLine("NICK %s", client.Nick)
+	client.WriteLine("USER %s 0 * :%s", client.Username, client.Realname)
 
 	return nil
 }

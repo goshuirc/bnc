@@ -85,7 +85,7 @@ func (socket *Socket) WriteLine(format string, args ...interface{}) (int, error)
 		line = fmt.Sprintf(format+"\n", args...)
 	}
 
-	return socket.Conn.Write([]byte(line))
+	return socket.Write([]byte(line))
 }
 
 func (socket *Socket) Write(p []byte) (n int, err error) {
