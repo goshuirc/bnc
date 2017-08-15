@@ -1,4 +1,4 @@
-memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
+memo = "29bfd0c6cd9dacdb2ea950f7ee6ba21478c126e79a040c2a6d955fbc6567a8aa"
 
 [[projects]]
   name = "code.cloudfoundry.org/bytefmt"
@@ -21,7 +21,7 @@ memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
   branch = "master"
   name = "github.com/fatih/color"
   packages = ["."]
-  revision = "62e9147c64a1ed519147b62a56a14e83e2be02c1"
+  revision = "67c513e5729f918f5e69786686770c27141a4490"
 
 [[projects]]
   branch = "master"
@@ -33,19 +33,31 @@ memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
   branch = "master"
   name = "github.com/goshuirc/irc-go"
   packages = ["client","ircfmt","ircmap","ircmsg"]
-  revision = "c9577d7c349ac27adae57d5b3ac2d66ccdb6b958"
+  revision = "ea7e22b650a0efd0aa223cdbf758b82959b40203"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
   packages = ["."]
-  revision = "941b50ebc6efddf4c41c8e4537a5f68a4e686b24"
-  version = "v0.0.8"
+  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
+  version = "v0.0.9"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
   revision = "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
   version = "v0.0.2"
+
+[[projects]]
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
+  version = "v0.0.2"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/olekukonko/tablewriter"
+  packages = ["."]
+  revision = "be5337e7b39e64e5f91445ce7e721888dbab7387"
 
 [[projects]]
   branch = "master"
@@ -63,7 +75,7 @@ memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
   branch = "master"
   name = "github.com/tidwall/gjson"
   packages = ["."]
-  revision = "c784c417818f59d6597274642d8ac1d09efc9b01"
+  revision = "4e8f0c7f2819fc0eceeae4d08df9dd92080b1b48"
 
 [[projects]]
   branch = "master"
@@ -87,22 +99,22 @@ memo = "9d8f04d5bbbcbc674622d38dc7af89752c1367dd14ce34626ddf7886046a6272"
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["bcrypt","blowfish","ssh/terminal"]
-  revision = "6914964337150723782436d56b3f21610a74ce7b"
+  revision = "b176d7def5d71bdd214203491f89843ed217f420"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "c4489faa6e5ab84c0ef40d6ee878f7a030281f0f"
+  packages = ["unix","windows"]
+  revision = "9f7170bcd8e9f4d3691c06401119c46a769a1e03"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["cases","internal","internal/gen","internal/tag","internal/triegen","internal/ucd","language","runes","secure/bidirule","secure/precis","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable","width"]
-  revision = "836efe42bb4aa16aaa17b9c155d8813d336ed720"
+  revision = "e56139fd9c5bc7244c76116c68e500765bb6db6b"
 
 [[projects]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "25c4ec802a7d637f88d584ab26798e94ad14c13b"
+  revision = "eb3733d160e74a9c7e442f435eb3bea458e1d19f"
