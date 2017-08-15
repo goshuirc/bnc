@@ -46,14 +46,21 @@ func onMessage(hook interface{}) {
 
 func commandListNetworks(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	table := NewTable()
-	table.SetHeader([]string{"Name", "Nick", "Connected"})
+	table.SetHeader([]string{"Name", "Nick", "Connected", "Address"})
 
 	for _, network := range listener.User.Networks {
 		connected := "No"
-		if network.Connected {
+		if network.Foo.HasRegistered {
 			connected = "Yes"
 		}
-		table.Append([]string{network.Name, network.Nickname, connected})
+
+		address := network.Addresses[0].Host + ":"
+		if network.Addresses[0].UseTLS {
+			address += "+"
+		}
+		address += strconv.Itoa(network.Addresses[0].Port)
+
+		table.Append([]string{network.Name, network.Nickname, connected, address})
 	}
 
 	table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
