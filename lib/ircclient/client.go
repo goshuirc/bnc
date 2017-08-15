@@ -29,6 +29,12 @@ func (caps *ClientCaps) CommonCaps() []string {
 	return common
 }
 
+// IsEnabled checks if a particular cap is enabled for this connection
+func (caps *ClientCaps) IsEnabled(cap string) bool {
+	_, exists := caps.Enabled[cap]
+	return exists
+}
+
 /**
  * Client is the IRC client
  */
@@ -56,6 +62,21 @@ func NewClient() *Client {
 		Enabled:   make(map[string]string),
 		Available: make(map[string]string),
 	}
+
+	client.Caps.Wanted = append(
+		client.Caps.Wanted,
+		"account-notify",
+		"away-notify",
+		"extended-join",
+		"multi-prefix",
+		"sasl",
+		"account-tag",
+		"cap-notify",
+		"chghost",
+		"invite-notify",
+		"server-time",
+		"userhost-in-names",
+	)
 
 	return client
 }
