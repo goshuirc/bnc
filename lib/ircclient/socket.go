@@ -7,6 +7,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/goshuirc/irc-go/ircmsg"
 )
@@ -17,6 +18,7 @@ type Socket struct {
 	TLS        bool
 	TLSConfig  *tls.Config
 	Conn       net.Conn
+	ConnLock   sync.Mutex
 	Connected  bool
 	MessagesIn chan ircmsg.IrcMessage
 }
@@ -98,5 +100,7 @@ func (socket *Socket) WriteLine(format string, args ...interface{}) (int, error)
 }
 
 func (socket *Socket) Write(p []byte) (n int, err error) {
+	socket.ConnLock.Lock()
+	defer socket.ConnLock.Unlock()
 	return socket.Conn.Write(p)
 }
