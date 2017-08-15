@@ -30,8 +30,16 @@ func NewSocket() *Socket {
 func (socket *Socket) Connect() error {
 	socket.Connected = false
 
+	destination := net.JoinHostPort(socket.Host, strconv.Itoa(socket.Port))
+
 	// TODO: Timeouts
-	conn, err := net.Dial("tcp", net.JoinHostPort(socket.Host, strconv.Itoa(socket.Port)))
+	var conn net.Conn
+	var err error
+	if socket.TLS {
+		conn, err = tls.Dial("tcp", destination, socket.TLSConfig)
+	} else {
+		conn, err = net.Dial("tcp", destination)
+	}
 	if err != nil {
 		return err
 	}
@@ -61,6 +69,7 @@ func (socket *Socket) readInput() {
 		}
 
 		line = strings.Trim(line, "\r\n")
+		println("[S " + socket.Host + "] " + line)
 		message, parseErr := ircmsg.ParseLine(line)
 		if parseErr == nil {
 			socket.MessagesIn <- message
@@ -85,6 +94,7 @@ func (socket *Socket) WriteLine(format string, args ...interface{}) (int, error)
 		line = fmt.Sprintf(format+"\n", args...)
 	}
 
+	println("[C " + socket.Host + "] " + strings.Trim(line, "\n"))
 	return socket.Write([]byte(line))
 }
 
