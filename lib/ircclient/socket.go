@@ -22,9 +22,7 @@ type Socket struct {
 }
 
 func NewSocket() *Socket {
-	return &Socket{
-		MessagesIn: make(chan ircmsg.IrcMessage),
-	}
+	return &Socket{}
 }
 
 func (socket *Socket) Connect() error {
@@ -52,7 +50,7 @@ func (socket *Socket) Connect() error {
 }
 
 func (socket *Socket) Close() error {
-	if !socket.Connected {
+	if socket.Connected {
 		return socket.Conn.Close()
 	}
 
@@ -60,8 +58,9 @@ func (socket *Socket) Close() error {
 }
 
 func (socket *Socket) readInput() {
-	reader := bufio.NewReader(socket.Conn)
+	socket.MessagesIn = make(chan ircmsg.IrcMessage)
 
+	reader := bufio.NewReader(socket.Conn)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {

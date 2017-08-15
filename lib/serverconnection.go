@@ -241,6 +241,13 @@ func (sc *ServerConnection) Connect() {
 	if err != nil {
 		name := fmt.Sprintf("%s/%s", sc.User.ID, sc.Name)
 		fmt.Println("ERROR: Could not connect to", name, err.Error())
+	} else {
+		// If not currently enabled, since we've just connected then mark as enabled and save the
+		// new connection state
+		if !sc.Enabled {
+			sc.Enabled = true
+			sc.User.Manager.Ds.SaveConnection(sc)
+		}
 	}
 }
 

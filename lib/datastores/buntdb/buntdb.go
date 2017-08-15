@@ -198,7 +198,7 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	// Store server info
 	sc := ServerConnectionMapping{
 		Name:             connection.Name,
-		Enabled:          true,
+		Enabled:          connection.Enabled,
 		ConnectPassword:  connection.Password,
 		Nickname:         connection.Nickname,
 		NicknameFallback: connection.FbNickname,
@@ -331,6 +331,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc details): %s", err.Error())
 	}
 
+	sc.Enabled = scInfo.Enabled
 	sc.Nickname = scInfo.Nickname
 	sc.FbNickname = scInfo.NicknameFallback
 	sc.Username = scInfo.Username

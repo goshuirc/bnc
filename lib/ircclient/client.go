@@ -6,6 +6,32 @@ import (
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
+/**
+ * ClientCaps holds the capabilities between the client and server
+ */
+type ClientCaps struct {
+	Wanted    []string
+	Enabled   map[string]string
+	Available map[string]string
+}
+
+// CommonCaps returns a slice of caps that both the client and server support
+func (caps *ClientCaps) CommonCaps() []string {
+	var common []string
+
+	for _, wantedCap := range caps.Wanted {
+		_, exists := caps.Available[wantedCap]
+		if exists {
+			common = append(common, wantedCap)
+		}
+	}
+
+	return common
+}
+
+/**
+ * Client is the IRC client
+ */
 type Client struct {
 	Socket
 	Nick             string
@@ -13,7 +39,7 @@ type Client struct {
 	Realname         string
 	Password         string
 	BindHost         string
-	Caps             []string
+	Caps             *ClientCaps
 	Supported        map[string]string
 	HasRegistered    bool
 	CommandListeners map[string][]func(*ircmsg.IrcMessage)
@@ -25,7 +51,12 @@ func NewClient() *Client {
 		Supported:        make(map[string]string),
 		CommandListeners: make(map[string][]func(*ircmsg.IrcMessage)),
 	}
-	go client.messageDispatcher()
+
+	client.Caps = &ClientCaps{
+		Enabled:   make(map[string]string),
+		Available: make(map[string]string),
+	}
+
 	return client
 }
 
@@ -35,6 +66,9 @@ func (client *Client) Connect() error {
 		return err
 	}
 
+	go client.messageDispatcher()
+
+	client.WriteLine("CAP LS 302")
 	client.WriteLine("NICK %s", client.Nick)
 	client.WriteLine("USER %s 0 * :%s", client.Username, client.Realname)
 
@@ -91,6 +125,8 @@ func (client *Client) messageDispatcher() {
 			handler(nil)
 		}
 	}
+
+	client.HasRegistered = false
 }
 
 func (client *Client) JoinChannel(channel string, key string) {

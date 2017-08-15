@@ -57,4 +57,71 @@ func loadServerCommands() {
 		},
 	}
 
+	ServerCommands["CAP"] = ServerCommand{
+		minParams: 2,
+		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+			command := msg.Params[1]
+
+			if command == "LS" && !client.HasRegistered {
+				capsRaw := ""
+				isLastCapsLine := true
+
+				// Multiline list
+				if getParam(msg, 2) == "*" {
+					capsRaw = getParam(msg, 3)
+					isLastCapsLine = false
+				} else {
+					capsRaw = getParam(msg, 2)
+				}
+
+				for _, cap := range strings.Split(capsRaw, " ") {
+					parts := strings.Split(cap, "=")
+					k := strings.ToLower(parts[0])
+					v := ""
+					if len(parts) > 1 {
+						v = parts[1]
+					}
+					client.Caps.Available[k] = v
+				}
+
+				if isLastCapsLine {
+					common := client.Caps.CommonCaps()
+					if len(common) > 0 {
+						client.WriteLine("CAP REQ :%s", strings.Join(common, " "))
+					} else {
+						client.WriteLine("CAP END")
+					}
+				}
+			}
+
+			if command == "ACK" {
+				// TODO: Do the ACK responses also use * to denote a multiline response?
+				capsRaw := getParam(msg, 2)
+
+				for _, cap := range strings.Split(capsRaw, " ") {
+					parts := strings.Split(cap, "=")
+					k := strings.ToLower(parts[0])
+					v := ""
+					if len(parts) > 1 {
+						v = parts[1]
+					}
+					client.Caps.Enabled[k] = v
+				}
+
+				client.WriteLine("CAP END")
+			}
+
+			if command == "NAK" {
+				// TODO: This
+			}
+		},
+	}
+}
+
+func getParam(msg *ircmsg.IrcMessage, idx int) string {
+	if len(msg.Params)-1 < idx {
+		return ""
+	}
+
+	return msg.Params[idx]
 }
