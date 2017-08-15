@@ -14,6 +14,7 @@ import (
 
 	"log"
 
+	"github.com/goshuirc/bnc/lib/ircclient"
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
@@ -187,7 +188,7 @@ func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, 
 		// spew.Dump(message)
 		// debug.PrintStack()
 
-		message = ircmsg.MakeMessage(nil, "", ERR_UNKNOWNERROR, "*", "Error assembling message for sending")
+		message = ircmsg.MakeMessage(nil, "", ircclient.ERR_UNKNOWNERROR, "*", "Error assembling message for sending")
 		line, _ := message.Line()
 		listener.Socket.Write(line)
 		return err

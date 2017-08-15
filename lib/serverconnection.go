@@ -65,22 +65,22 @@ type ServerConnectionChannels []ServerConnectionChannel
 
 //TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{
-	RPL_WELCOME:       true,
-	RPL_YOURHOST:      true,
-	RPL_CREATED:       true,
-	RPL_MYINFO:        true,
-	RPL_ISUPPORT:      true,
-	"250":             true,
-	RPL_LUSERCLIENT:   true,
-	RPL_LUSEROP:       true,
-	RPL_LUSERCHANNELS: true,
-	RPL_LUSERME:       true,
-	"265":             true,
-	"266":             true,
-	RPL_MOTD:          true,
-	RPL_MOTDSTART:     true,
-	RPL_ENDOFMOTD:     true,
-	ERR_NOMOTD:        true,
+	ircclient.RPL_WELCOME:  true,
+	ircclient.RPL_YOURHOST: true,
+	ircclient.RPL_CREATED:  true,
+	ircclient.RPL_MYINFO:   true,
+	ircclient.RPL_ISUPPORT: true,
+	"250": true,
+	ircclient.RPL_LUSERCLIENT:   true,
+	ircclient.RPL_LUSEROP:       true,
+	ircclient.RPL_LUSERCHANNELS: true,
+	ircclient.RPL_LUSERME:       true,
+	"265":                   true,
+	"266":                   true,
+	ircclient.RPL_MOTD:      true,
+	ircclient.RPL_MOTDSTART: true,
+	ircclient.RPL_ENDOFMOTD: true,
+	ircclient.ERR_NOMOTD:    true,
 }
 
 // disconnectHandler extracts and stores .

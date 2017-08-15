@@ -7,8 +7,7 @@ import (
 )
 
 func loadServerCommands() {
-	// WELCOME
-	ServerCommands["001"] = ServerCommand{
+	ServerCommands[RPL_WELCOME] = ServerCommand{
 		minParams: 1,
 		handler: func(client *Client, msg *ircmsg.IrcMessage) {
 			client.Nick = msg.Params[0]
@@ -16,8 +15,7 @@ func loadServerCommands() {
 		},
 	}
 
-	// ISUPPORT
-	ServerCommands["005"] = ServerCommand{
+	ServerCommands[RPL_ISUPPORT] = ServerCommand{
 		minParams: 1,
 		handler: func(client *Client, msg *ircmsg.IrcMessage) {
 			supported := msg.Params[1 : len(msg.Params)-1]
@@ -32,8 +30,7 @@ func loadServerCommands() {
 		},
 	}
 
-	// ERR_NICKNAMEINUSE
-	ServerCommands["433"] = ServerCommand{
+	ServerCommands[ERR_NICKNAMEINUSE] = ServerCommand{
 		minParams: 0,
 		handler: func(client *Client, msg *ircmsg.IrcMessage) {
 			if client.HasRegistered {

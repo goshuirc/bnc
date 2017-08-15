@@ -3,7 +3,7 @@
 // Copyright (c) 2016-2017 Daniel Oaks <daniel@danieloaks.net>
 // released under the MIT license
 
-package ircbnc
+package ircclient
 
 // These numerics have been retrieved from:
 //   http://defs.ircdocs.horse/ and http://modern.ircdocs.horse/
