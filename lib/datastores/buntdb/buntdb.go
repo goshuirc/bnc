@@ -212,7 +212,15 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
 
 	// Store server addresses
-	saBytes, err := json.Marshal(connection.Addresses)
+	addresses := make([]ServerConnectionAddressMapping, len(connection.Addresses))
+	for idx, addr := range connection.Addresses {
+		addresses[idx].Host = addr.Host
+		addresses[idx].Port = addr.Port
+		addresses[idx].UseTLS = addr.UseTLS
+		addresses[idx].VerifyTLS = addr.VerifyTLS
+	}
+
+	saBytes, err := json.Marshal(addresses)
 	if err != nil {
 		return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
 	}
