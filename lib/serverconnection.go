@@ -14,10 +14,10 @@ import (
 
 // ServerConnection represents a connection to an IRC server.
 type ServerConnection struct {
-	Name      string
-	User      *User
-	Connected bool
-	Enabled   bool
+	Name string
+	User *User
+	// Connected bool
+	Enabled bool
 
 	Nickname   string
 	FbNickname string
@@ -185,8 +185,6 @@ func (sc *ServerConnection) AddListener(listener *Listener) {
 
 // Start opens and starts connecting to the server.
 func (sc *ServerConnection) Start() {
-	name := fmt.Sprintf("%s %s", sc.User.ID, sc.Name)
-
 	sc.Foo.Nick = sc.Nickname
 	sc.Foo.Username = sc.Username
 	sc.Foo.Realname = sc.Realname
@@ -201,6 +199,27 @@ func (sc *ServerConnection) Start() {
 		sc.Foo.JoinChannel(channel.Name, channel.Key)
 	}
 
+	go sc.ReceiveLoop()
+
+	if sc.Enabled {
+		sc.Connect()
+	}
+}
+
+func (sc *ServerConnection) Disconnect() {
+	if sc.Foo.Connected {
+		sc.Foo.Close()
+	}
+
+	sc.Enabled = false
+	sc.User.Manager.Ds.SaveConnection(sc)
+}
+
+func (sc *ServerConnection) Connect() {
+	if sc.Foo.Connected {
+		return
+	}
+
 	var err error
 	for _, address := range sc.Addresses {
 		sc.Foo.Host = address.Host
@@ -213,18 +232,16 @@ func (sc *ServerConnection) Start() {
 		}
 		sc.Foo.TLSConfig = tlsConfig
 
-		err := sc.Foo.Connect()
+		err = sc.Foo.Connect()
 		if err == nil {
 			break
 		}
 	}
 
 	if err != nil {
+		name := fmt.Sprintf("%s/%s", sc.User.ID, sc.Name)
 		fmt.Println("ERROR: Could not connect to", name, err.Error())
-		return
 	}
-
-	go sc.ReceiveLoop()
 }
 
 func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
