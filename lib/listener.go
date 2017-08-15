@@ -8,26 +8,59 @@ import (
 	"net"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"code.cloudfoundry.org/bytefmt"
 
 	"log"
 
+	"github.com/goshuirc/bnc/lib/ircclient"
 	"github.com/goshuirc/irc-go/ircmsg"
 )
+
+type RegistrationLocks struct {
+	Lock     sync.Mutex
+	Cap      bool
+	Nick     bool
+	User     bool
+	Listener bool
+}
+
+func (locks *RegistrationLocks) Set(lockName string, val bool) {
+	locks.Lock.Lock()
+
+	switch lockName {
+	case "cap":
+		locks.Cap = val
+	case "nick":
+		locks.Nick = val
+	case "user":
+		locks.User = val
+	case "listener":
+		locks.Listener = val
+	}
+
+	locks.Lock.Unlock()
+}
+
+func (locks *RegistrationLocks) Completed() bool {
+	locks.Lock.Lock()
+	completed := locks.Cap && locks.Listener && locks.Nick && locks.User
+	locks.Lock.Unlock()
+	return completed
+}
 
 // Listener is a listener for a client connected directly to us.
 type Listener struct {
 	Socket Socket
 
-	Manager     *Manager
-	ConnectTime time.Time
-	ClientNick  string
-	Source      string
-	Registered  bool
-	regLocks    map[string]bool
-
+	Manager          *Manager
+	ConnectTime      time.Time
+	ClientNick       string
+	Source           string
+	Registered       bool
+	regLocks         *RegistrationLocks
 	User             *User
 	ServerConnection *ServerConnection
 }
@@ -55,11 +88,11 @@ func NewListener(m *Manager, conn net.Conn) {
 		ClientNick:  "*",
 		ConnectTime: now,
 		Source:      m.Source,
-		regLocks: map[string]bool{
-			"CAP":      true,
-			"NICK":     false,
-			"USER":     false,
-			"LISTENER": false,
+		regLocks: &RegistrationLocks{
+			Cap:      true,
+			Nick:     false,
+			User:     false,
+			Listener: false,
 		},
 	}
 
@@ -84,14 +117,8 @@ func (listener *Listener) tryRegistration() {
 	if listener.Registered {
 		return
 	}
-	isRegistered := true
-	for _, fulfilled := range listener.regLocks {
-		if !fulfilled {
-			isRegistered = false
-			break
-		}
-	}
-	if isRegistered {
+
+	if listener.regLocks.Completed() {
 		listener.DumpRegistration()
 		listener.Registered = true
 		listener.DumpChannels()
@@ -161,7 +188,8 @@ func (listener *Listener) processIncomingLine(line string) bool {
 	}
 
 	if listener.Registered {
-		err := listener.ServerConnection.currentServer.Send(&msg.Tags, msg.Prefix, msg.Command, msg.Params...)
+		line, _ := msg.Line()
+		_, err := listener.ServerConnection.Foo.WriteLine(line)
 		if err != nil {
 			log.Println(err.Error())
 		}
@@ -186,7 +214,7 @@ func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, 
 		// spew.Dump(message)
 		// debug.PrintStack()
 
-		message = ircmsg.MakeMessage(nil, "", ERR_UNKNOWNERROR, "*", "Error assembling message for sending")
+		message = ircmsg.MakeMessage(nil, "", ircclient.ERR_UNKNOWNERROR, "*", "Error assembling message for sending")
 		line, _ := message.Line()
 		listener.Socket.Write(line)
 		return err

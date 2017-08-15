@@ -41,19 +41,65 @@ func onMessage(hook interface{}) {
 		commandListNetworks(listener, params, msg)
 	case "addnetwork":
 		commandAddNetwork(listener, params, msg)
+	case "connect":
+		commandConnectNetwork(listener, params, msg)
+	case "disconnect":
+		commandDisconnectNetwork(listener, params, msg)
 	}
+}
+
+func commandConnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	netName := listener.ServerConnection.Name
+	if len(params) >= 1 {
+		netName = params[0]
+	}
+
+	net, exists := listener.User.Networks[netName]
+	if !exists {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" not found")
+		return
+	}
+
+	net.Connect()
+}
+
+func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	netName := listener.ServerConnection.Name
+	if len(params) >= 1 {
+		netName = params[0]
+	}
+
+	net, exists := listener.User.Networks[netName]
+	if !exists {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" not found")
+		return
+	}
+
+	net.Disconnect()
 }
 
 func commandListNetworks(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	table := NewTable()
-	table.SetHeader([]string{"Name", "Nick", "Connected"})
+	table.SetHeader([]string{"Name", "Nick", "Connected", "Address"})
 
 	for _, network := range listener.User.Networks {
 		connected := "No"
-		if network.Connected {
+		if network.Foo.HasRegistered {
 			connected = "Yes"
 		}
-		table.Append([]string{network.Name, network.Nickname, connected})
+
+		address := network.Addresses[0].Host + ":"
+		if network.Addresses[0].UseTLS {
+			address += "+"
+		}
+		address += strconv.Itoa(network.Addresses[0].Port)
+
+		name := network.Name
+		if network == listener.ServerConnection {
+			name = "*" + name
+		}
+
+		table.Append([]string{name, network.Nickname, connected, address})
 	}
 
 	table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")

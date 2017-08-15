@@ -26,7 +26,7 @@ func loadClientCommands() {
 			// we ignore NICK messages during registration
 			if !listener.Registered {
 				listener.ClientNick = nick
-				listener.regLocks["NICK"] = true
+				listener.regLocks.Set("nick", true)
 				return false
 			}
 			//TODO(dan): Handle NICK messages when connected to servers.
@@ -43,7 +43,7 @@ func loadClientCommands() {
 			// we ignore the content of USER messages entirely, since we use our internal
 			// user and realname when actually connecting to servers
 			if !listener.Registered {
-				listener.regLocks["USER"] = true
+				listener.regLocks.Set("user", true)
 			}
 			return false
 		},
@@ -88,7 +88,7 @@ func loadClientCommands() {
 				network.AddListener(listener)
 			} else {
 				log.Println("Network '" + networkID + "' doesnt exist")
-				listener.regLocks["LISTENER"] = true
+				listener.regLocks.Set("listener", true)
 				listener.tryRegistration()
 			}
 

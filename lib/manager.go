@@ -12,8 +12,6 @@ import (
 	"net"
 	"os"
 	"syscall"
-
-	"github.com/goshuirc/irc-go/client"
 )
 
 var (
@@ -63,14 +61,12 @@ func NewManager(config *Config, ds DataStoreInterface) *Manager {
 
 // Run starts the bouncer, creating the listeners and server connections.
 func (m *Manager) Run() error {
-	// create reactor
-	scReactor := gircclient.NewReactor()
 
 	// load users
 	users := m.Ds.GetAllUsers()
 	for _, user := range users {
 		m.Users[user.ID] = user
-		m.Users[user.ID].StartServerConnections(scReactor)
+		m.Users[user.ID].StartServerConnections()
 	}
 
 	// open listeners

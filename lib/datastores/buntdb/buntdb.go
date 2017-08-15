@@ -133,7 +133,7 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 
 	// Just use the username as the ID
 	if user.ID == "" {
-		user.ID = strings.ToLower(user.Name)
+		ui.ID = strings.ToLower(user.Name)
 	}
 
 	uiBytes, err := json.Marshal(ui)
@@ -159,6 +159,9 @@ func (ds *DataStore) SaveUser(user *ircbnc.User) error {
 		if err != nil {
 			return err
 		}
+
+		// Make sure the User instance has the uptodate ID
+		user.ID = ui.ID
 		return nil
 	})
 
@@ -195,7 +198,7 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	// Store server info
 	sc := ServerConnectionMapping{
 		Name:             connection.Name,
-		Enabled:          true,
+		Enabled:          connection.Enabled,
 		ConnectPassword:  connection.Password,
 		Nickname:         connection.Nickname,
 		NicknameFallback: connection.FbNickname,
@@ -209,7 +212,15 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	scString := string(scBytes) //TODO(dan): Should we do this in a safer way?
 
 	// Store server addresses
-	saBytes, err := json.Marshal(connection.Addresses)
+	addresses := make([]ServerConnectionAddressMapping, len(connection.Addresses))
+	for idx, addr := range connection.Addresses {
+		addresses[idx].Host = addr.Host
+		addresses[idx].Port = addr.Port
+		addresses[idx].UseTLS = addr.UseTLS
+		addresses[idx].VerifyTLS = addr.VerifyTLS
+	}
+
+	saBytes, err := json.Marshal(addresses)
 	if err != nil {
 		return fmt.Errorf("Error marshalling user permissions: %s", err.Error())
 	}
@@ -320,6 +331,7 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc details): %s", err.Error())
 	}
 
+	sc.Enabled = scInfo.Enabled
 	sc.Nickname = scInfo.Nickname
 	sc.FbNickname = scInfo.NicknameFallback
 	sc.Username = scInfo.Username
