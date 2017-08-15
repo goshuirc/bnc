@@ -167,7 +167,7 @@ func (sc *ServerConnection) ReceiveLoop() {
 			listener.ServerConnection = sc
 
 			// registration blocks on the listener being added, continue if we should
-			listener.regLocks["LISTENER"] = true
+			listener.regLocks.Set("listener", true)
 			listener.tryRegistration()
 		} else {
 			log.Fatal("Got an event I cannot parse")
