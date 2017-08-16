@@ -152,7 +152,7 @@ func (listener *Listener) RunSocketReader() {
 
 // processIncomingLine splits and handles the given command line.
 // Returns true if client is exiting (sent a QUIT command, etc).
-func (listener *Listener) processIncomingLine(line string) bool {
+func (listener *Listener) processIncomingLine(line string) {
 	// Don't let a single users error kill the entire bnc for everyone
 	defer func() {
 		if r := recover(); r != nil {
@@ -174,18 +174,18 @@ func (listener *Listener) processIncomingLine(line string) bool {
 	}
 	listener.Manager.Bus.Dispatch(HookIrcRawName, hook)
 	if hook.Halt {
-		return false
+		return
 	}
 
 	if parseLineErr != nil {
 		listener.Send(nil, "", "ERROR", "Your client sent a malformed line")
-		return true
+		return
 	}
 
-	command, canBeParsed := ClientCommands[strings.ToUpper(msg.Command)]
-
-	if canBeParsed {
-		return command.Run(listener, msg)
+	command, commandExists := ClientCommands[strings.ToUpper(msg.Command)]
+	if commandExists {
+		command.Run(listener, msg)
+		return
 	}
 
 	if listener.Registered {
@@ -195,8 +195,6 @@ func (listener *Listener) processIncomingLine(line string) bool {
 			log.Println(err.Error())
 		}
 	}
-
-	return false
 
 	//TODO(dan): This is an error+disconnect purely for reasons of testing.
 	// Later it may be downgraded to not-that-bad.

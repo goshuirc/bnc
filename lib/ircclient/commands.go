@@ -24,6 +24,7 @@ type ServerCommand struct {
 func (cmd *ServerCommand) Run(client *Client, msg *ircmsg.IrcMessage) {
 	if len(msg.Params) < cmd.minParams {
 		log.Println("Not enough parameters sent from the server: " + msg.SourceLine)
+		return
 	}
 	cmd.handler(client, msg)
 }
