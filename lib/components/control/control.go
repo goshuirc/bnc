@@ -61,6 +61,11 @@ func commandConnectNetwork(listener *ircbnc.Listener, params []string, message i
 	}
 
 	net.Connect()
+	if net.Foo.Connected {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" connected!")
+	} else {
+		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" could not connect")
+	}
 }
 
 func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
