@@ -93,6 +93,16 @@ func (sc *ServerConnection) disconnectHandler(message *ircmsg.IrcMessage) {
 	}
 }
 
+func (sc *ServerConnection) updateNickHandler(message *ircmsg.IrcMessage) {
+	// Update the nick we have for the client before the message gets piped down
+	// to the client
+	for _, listener := range sc.Listeners {
+		if listener.Registered && sc.Foo.Nick != listener.ClientNick {
+			listener.ClientNick = sc.Foo.Nick
+		}
+	}
+}
+
 func (sc *ServerConnection) rawToListeners(message *ircmsg.IrcMessage) {
 	hook := &HookIrcRaw{
 		FromServer: true,
@@ -177,6 +187,8 @@ func (sc *ServerConnection) Start() {
 	sc.Foo.Realname = sc.Realname
 	sc.Foo.Password = sc.Password
 
+	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.updateNickHandler)
+	sc.Foo.HandleCommand("NICK", sc.updateNickHandler)
 	sc.Foo.HandleCommand("ALL", sc.connectLinesHandler)
 	sc.Foo.HandleCommand("ALL", sc.rawToListeners)
 	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
