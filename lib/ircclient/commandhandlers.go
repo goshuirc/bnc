@@ -9,17 +9,19 @@ import (
 func loadServerCommands() {
 	ServerCommands[RPL_WELCOME] = ServerCommand{
 		minParams: 1,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			client.Lock()
 			client.Nick = msg.Params[0]
 			client.HasRegistered = true
 			client.Unlock()
+
+			return false
 		},
 	}
 
 	ServerCommands[RPL_ISUPPORT] = ServerCommand{
 		minParams: 1,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			client.Lock()
 			defer client.Unlock()
 
@@ -32,14 +34,16 @@ func loadServerCommands() {
 					client.Supported[parts[0]] = parts[1]
 				}
 			}
+
+			return false
 		},
 	}
 
 	ServerCommands[ERR_NICKNAMEINUSE] = ServerCommand{
 		minParams: 0,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			if client.HasRegistered {
-				return
+				return true
 			}
 
 			// TODO: This should use the fallback nick set ont he client
@@ -48,28 +52,33 @@ func loadServerCommands() {
 			client.Unlock()
 
 			client.WriteLine("NICK %s", client.Nick)
+
+			return true
 		},
 	}
 
 	ServerCommands["NICK"] = ServerCommand{
 		minParams: 1,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			client.Lock()
 			client.Nick = msg.Params[0]
 			client.Unlock()
+
+			return false
 		},
 	}
 
 	ServerCommands["PING"] = ServerCommand{
 		minParams: 1,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			client.WriteLine("PONG :%s", msg.Params[0])
+			return true
 		},
 	}
 
 	ServerCommands["CAP"] = ServerCommand{
 		minParams: 2,
-		handler: func(client *Client, msg *ircmsg.IrcMessage) {
+		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
 			command := msg.Params[1]
 
 			if command == "LS" && !client.HasRegistered {
@@ -130,6 +139,8 @@ func loadServerCommands() {
 			if command == "NAK" {
 				// TODO: This
 			}
+
+			return true
 		},
 	}
 }

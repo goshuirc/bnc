@@ -16,15 +16,15 @@ func init() {
 
 // ClientCommand represents a command accepted on a listener.
 type ServerCommand struct {
-	handler   func(client *Client, msg *ircmsg.IrcMessage)
+	handler   func(client *Client, msg *ircmsg.IrcMessage) bool
 	minParams int
 }
 
 // Run runs this command with the given listener/message.
-func (cmd *ServerCommand) Run(client *Client, msg *ircmsg.IrcMessage) {
+func (cmd *ServerCommand) Run(client *Client, msg *ircmsg.IrcMessage) bool {
 	if len(msg.Params) < cmd.minParams {
 		log.Println("Not enough parameters sent from the server: " + msg.SourceLine)
-		return
+		return false
 	}
-	cmd.handler(client, msg)
+	return cmd.handler(client, msg)
 }

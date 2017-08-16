@@ -125,7 +125,10 @@ func (client *Client) messageDispatcher() {
 		// Run our internal command handlers first
 		command, commandExists := ServerCommands[message.Command]
 		if commandExists {
-			command.Run(client, &message)
+			shouldHalt := command.Run(client, &message)
+			if shouldHalt {
+				continue
+			}
 		}
 
 		// Dispatch any command handler
