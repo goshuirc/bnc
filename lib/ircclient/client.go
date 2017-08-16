@@ -99,6 +99,9 @@ func (client *Client) Connect() error {
 }
 
 func (client *Client) HandleCommand(command string, fn func(*ircmsg.IrcMessage)) {
+	client.Lock()
+	defer client.Unlock()
+
 	command = strings.ToUpper(command)
 
 	ar, _ := client.CommandListeners[command]
@@ -149,7 +152,9 @@ func (client *Client) messageDispatcher() {
 		}
 	}
 
+	client.Lock()
 	client.HasRegistered = false
+	client.Unlock()
 }
 
 func (client *Client) JoinChannel(channel string, key string) {
