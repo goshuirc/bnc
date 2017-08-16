@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](http://semver.org/). For the purpo
 go build bnc.go
 cp default-bnc.yaml bnc.yaml
 vim bnc.yaml  # modify the config file to your liking
-./bnc initdb
+./bnc init
 ./bnc start
 ```
 
