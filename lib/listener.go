@@ -189,6 +189,11 @@ func (listener *Listener) processIncomingLine(line string) {
 		return
 	}
 
+	shouldHalt := Capabilities.MessageFromClient(listener, &msg)
+	if shouldHalt {
+		return
+	}
+
 	command, commandExists := ClientCommands[strings.ToUpper(msg.Command)]
 	if commandExists {
 		command.Run(listener, msg)
@@ -211,12 +216,13 @@ func (listener *Listener) processIncomingLine(line string) {
 
 // Send sends an IRC line to the listener.
 func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, command string, params ...string) error {
-	if command == "ACCOUNT" && !listener.IsCapEnabled("account-notify") {
+	message := ircmsg.MakeMessage(tags, prefix, command, params...)
+
+	shouldHalt := Capabilities.MessageToClient(listener, &message)
+	if shouldHalt {
 		return nil
 	}
 
-	// send out the message
-	message := ircmsg.MakeMessage(tags, prefix, command, params...)
 	line, err := message.Line()
 	if err != nil {
 		// try not to fail quietly - especially useful when running tests, as a note to dig deeper

@@ -99,26 +99,16 @@ func loadClientCommands() {
 			// We're starting CAP negotiations so don't complete regisration until then
 			listener.regLocks.Set("cap", false)
 
-			availableCaps := map[string]string{
-				"account-notify": "",
-			}
-
 			command := getParam(&msg, 0)
 			if command == "LS" {
-				capList := ""
-				for cap, val := range availableCaps {
-					capList += cap
-					if val != "" {
-						capList += "=" + val
-					}
-					capList += " "
-				}
+				capList := Capabilities.AsString()
 				listener.Send(nil, "", "CAP", "*", "LS", capList)
+
 			} else if command == "REQ" {
 				caps := strings.Split(getParam(&msg, 1), " ")
 				acked := []string{}
 				for _, cap := range caps {
-					capVal, isAvailable := availableCaps[cap]
+					capVal, isAvailable := Capabilities.Supported[cap]
 					if isAvailable {
 						listener.Caps[cap] = capVal
 						acked = append(acked, cap)
@@ -126,6 +116,7 @@ func loadClientCommands() {
 				}
 
 				listener.Send(nil, "", "CAP", "*", "ACK", strings.Join(acked, " "))
+
 			} else if command == "END" {
 				listener.regLocks.Set("cap", true)
 			}
