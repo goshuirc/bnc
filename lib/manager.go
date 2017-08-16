@@ -113,7 +113,7 @@ func (m *Manager) Run() error {
 			log.Fatal("Shutting down! (TODO: write real shutdown code)")
 			done = true
 		case conn := <-m.newConns:
-			NewListener(m, conn)
+			go NewListener(m, conn)
 		}
 	}
 

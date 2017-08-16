@@ -84,9 +84,11 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 
 	for _, network := range listener.User.Networks {
 		connected := "No"
+		network.Foo.RLock()
 		if network.Foo.HasRegistered {
 			connected = "Yes"
 		}
+		network.Foo.RUnlock()
 
 		address := network.Addresses[0].Host + ":"
 		if network.Addresses[0].UseTLS {

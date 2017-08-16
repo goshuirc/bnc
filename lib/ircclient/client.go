@@ -2,6 +2,7 @@ package ircclient
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/goshuirc/irc-go/ircmsg"
 )
@@ -39,6 +40,7 @@ func (caps *ClientCaps) IsEnabled(cap string) bool {
  * Client is the IRC client
  */
 type Client struct {
+	sync.RWMutex
 	Socket
 	Nick             string
 	Username         string

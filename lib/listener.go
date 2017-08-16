@@ -20,11 +20,11 @@ import (
 )
 
 type RegistrationLocks struct {
-	Lock     sync.Mutex
-	Cap      bool
-	Nick     bool
-	User     bool
-	Listener bool
+	Lock sync.Mutex
+	Cap  bool
+	Nick bool
+	User bool
+	Pass bool
 }
 
 func (locks *RegistrationLocks) Set(lockName string, val bool) {
@@ -37,8 +37,8 @@ func (locks *RegistrationLocks) Set(lockName string, val bool) {
 		locks.Nick = val
 	case "user":
 		locks.User = val
-	case "listener":
-		locks.Listener = val
+	case "pass":
+		locks.Pass = val
 	}
 
 	locks.Lock.Unlock()
@@ -46,7 +46,7 @@ func (locks *RegistrationLocks) Set(lockName string, val bool) {
 
 func (locks *RegistrationLocks) Completed() bool {
 	locks.Lock.Lock()
-	completed := locks.Cap && locks.Listener && locks.Nick && locks.User
+	completed := locks.Cap && locks.Pass && locks.Nick && locks.User
 	locks.Lock.Unlock()
 	return completed
 }
@@ -65,21 +65,6 @@ type Listener struct {
 	ServerConnection *ServerConnection
 }
 
-// RunSocketReader reads lines from the listener socket and dispatches them as appropriate.
-func (listener *Listener) RunSocketReader() {
-	for {
-		line, err := listener.Socket.Read()
-		if err != nil {
-			break
-		}
-		listener.processIncomingLine(line)
-	}
-
-	listener.Manager.Bus.Dispatch(HookListenerCloseName, &HookListenerClose{
-		Listener: listener,
-	})
-}
-
 // NewListener creates a new Listener.
 func NewListener(m *Manager, conn net.Conn) {
 	now := time.Now()
@@ -89,10 +74,10 @@ func NewListener(m *Manager, conn net.Conn) {
 		ConnectTime: now,
 		Source:      m.Source,
 		regLocks: &RegistrationLocks{
-			Cap:      true,
-			Nick:     false,
-			User:     false,
-			Listener: false,
+			Cap:  true,
+			Nick: false,
+			User: false,
+			Pass: false,
 		},
 	}
 
@@ -109,7 +94,7 @@ func NewListener(m *Manager, conn net.Conn) {
 	}
 
 	go listener.Socket.RunSocketWriter()
-	go listener.RunSocketReader()
+	listener.RunSocketReader()
 }
 
 // tryRegistration dumps the registration blob and all if it hasn't been sent already.
@@ -147,6 +132,22 @@ func (listener *Listener) DumpChannels() {
 	if listener.ServerConnection != nil {
 		listener.ServerConnection.DumpChannels(listener)
 	}
+}
+
+// RunSocketReader reads lines from the listener socket and dispatches them as appropriate.
+func (listener *Listener) RunSocketReader() {
+	for {
+		line, err := listener.Socket.Read()
+		if err != nil {
+			break
+		}
+
+		listener.processIncomingLine(line)
+	}
+
+	listener.Manager.Bus.Dispatch(HookListenerCloseName, &HookListenerClose{
+		Listener: listener,
+	})
 }
 
 // processIncomingLine splits and handles the given command line.

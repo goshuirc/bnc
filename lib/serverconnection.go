@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/goshuirc/bnc/lib/ircclient"
 	"github.com/goshuirc/irc-go/ircmsg"
@@ -30,7 +31,9 @@ type ServerConnection struct {
 
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
-	Listeners              []*Listener
+
+	ListenersLock sync.Mutex
+	Listeners     []*Listener
 
 	Password  string
 	Addresses []ServerConnectionAddress
@@ -103,11 +106,13 @@ func (sc *ServerConnection) rawToListeners(message *ircmsg.IrcMessage) {
 		return
 	}
 
+	sc.ListenersLock.Lock()
 	for _, listener := range sc.Listeners {
 		if listener.Registered {
 			listener.SendLine(message.SourceLine)
 		}
 	}
+	sc.ListenersLock.Unlock()
 }
 
 // connectLinesHandler extracts and stores the connection lines.
@@ -156,31 +161,13 @@ func (sc *ServerConnection) DumpChannels(listener *Listener) {
 	}
 }
 
-// ReceiveLoop runs a loop of receiving and dispatching new messages.
-func (sc *ServerConnection) ReceiveLoop() {
-	for {
-		msg := <-sc.ReceiveEvents
-
-		if msg.Type == AddListenerMT {
-			listener := msg.Info[ListenerIK].(*Listener)
-			sc.Listeners = append(sc.Listeners, listener)
-			listener.ServerConnection = sc
-
-			// registration blocks on the listener being added, continue if we should
-			listener.regLocks.Set("listener", true)
-			listener.tryRegistration()
-		} else {
-			log.Fatal("Got an event I cannot parse")
-			fmt.Println(msg)
-		}
-	}
-}
-
 // AddListener adds the given listener to this ServerConnection.
 func (sc *ServerConnection) AddListener(listener *Listener) {
-	message := NewMessage(AddListenerMT, NoMV)
-	message.Info[ListenerIK] = listener
-	sc.ReceiveEvents <- message
+	sc.ListenersLock.Lock()
+	sc.Listeners = append(sc.Listeners, listener)
+	sc.ListenersLock.Unlock()
+
+	listener.ServerConnection = sc
 }
 
 // Start opens and starts connecting to the server.
@@ -198,8 +185,6 @@ func (sc *ServerConnection) Start() {
 	for _, channel := range sc.Channels {
 		sc.Foo.JoinChannel(channel.Name, channel.Key)
 	}
-
-	go sc.ReceiveLoop()
 
 	if sc.Enabled {
 		sc.Connect()

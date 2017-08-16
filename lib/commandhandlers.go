@@ -88,10 +88,9 @@ func loadClientCommands() {
 				network.AddListener(listener)
 			} else {
 				log.Println("Network '" + networkID + "' doesnt exist")
-				listener.regLocks.Set("listener", true)
-				listener.tryRegistration()
 			}
 
+			listener.regLocks.Set("pass", true)
 			return false
 		},
 	}
