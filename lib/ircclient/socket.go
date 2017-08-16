@@ -46,6 +46,8 @@ func (socket *Socket) Connect() error {
 
 	socket.Connected = true
 	socket.Conn = conn
+
+	socket.MessagesIn = make(chan ircmsg.IrcMessage)
 	go socket.readInput()
 
 	return nil
@@ -60,8 +62,6 @@ func (socket *Socket) Close() error {
 }
 
 func (socket *Socket) readInput() {
-	socket.MessagesIn = make(chan ircmsg.IrcMessage)
-
 	reader := bufio.NewReader(socket.Conn)
 	for {
 		line, err := reader.ReadString('\n')
