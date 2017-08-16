@@ -9,10 +9,12 @@ import (
 )
 
 // Nick of the controller
-const CONTROL_NICK = "*goshu"
-const CONTROL_PREFIX = CONTROL_NICK + "!bnc@irc.goshu"
+var control_nick string
+var control_source string
 
 func Run(manager *ircbnc.Manager) {
+	control_nick = manager.StatusNick
+	control_source = manager.StatusSource
 	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
 }
 
@@ -25,7 +27,7 @@ func onMessage(hook interface{}) {
 	msg := event.Message
 	listener := event.Listener
 
-	if msg.Command != "PRIVMSG" || msg.Params[0] != CONTROL_NICK {
+	if msg.Command != "PRIVMSG" || msg.Params[0] != control_nick {
 		return
 	}
 
@@ -56,15 +58,15 @@ func commandConnectNetwork(listener *ircbnc.Listener, params []string, message i
 
 	net, exists := listener.User.Networks[netName]
 	if !exists {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" not found")
+		listener.SendStatus("Network " + netName + " not found")
 		return
 	}
 
 	net.Connect()
 	if net.Foo.Connected {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" connected!")
+		listener.SendStatus("Network " + netName + " connected!")
 	} else {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" could not connect")
+		listener.SendStatus("Network " + netName + " could not connect")
 	}
 }
 
@@ -76,7 +78,7 @@ func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, messag
 
 	net, exists := listener.User.Networks[netName]
 	if !exists {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Network "+netName+" not found")
+		listener.SendStatus("Network " + netName + " not found")
 		return
 	}
 
@@ -109,13 +111,13 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 		table.Append([]string{name, network.Nickname, connected, address})
 	}
 
-	table.RenderToListener(listener, CONTROL_PREFIX, "PRIVMSG")
+	table.RenderToListener(listener, control_source, "PRIVMSG")
 }
 
 func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	sendUsage := func() {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Usage: addnetwork name address [port] [password]")
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "To use SSL/TLS, add + infront of the port number.")
+		listener.SendStatus("Usage: addnetwork name address [port] [password]")
+		listener.SendStatus("To use SSL/TLS, add + infront of the port number.")
 	}
 
 	if len(params) < 2 {
@@ -163,8 +165,8 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 
 	err := listener.Manager.Ds.SaveConnection(connection)
 	if err != nil {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "Could not save the new network")
+		listener.SendStatus("Could not save the new network")
 	} else {
-		listener.Send(nil, CONTROL_PREFIX, "PRIVMSG", listener.ClientNick, "New network saved")
+		listener.SendStatus("New network saved")
 	}
 }

@@ -89,7 +89,7 @@ var storedConnectLines = map[string]bool{
 // disconnectHandler extracts and stores .
 func (sc *ServerConnection) disconnectHandler(message *ircmsg.IrcMessage) {
 	for _, listener := range sc.Listeners {
-		listener.Send(nil, listener.Manager.StatusSource, "PRIVMSG", "Disconnected from server")
+		listener.SendStatus("Disconnected from " + sc.Name)
 	}
 }
 

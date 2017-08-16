@@ -227,3 +227,7 @@ func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, 
 func (listener *Listener) SendLine(line string) {
 	listener.Socket.WriteLine(line)
 }
+
+func (listener *Listener) SendStatus(line string) {
+	listener.Send(nil, listener.Manager.StatusSource, "PRIVMSG", listener.ClientNick, line)
+}

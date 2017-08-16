@@ -32,6 +32,7 @@ type Manager struct {
 	quitSignals chan os.Signal
 
 	Source       string
+	StatusNick   string
 	StatusSource string
 
 	Bus HookEmitter
@@ -53,8 +54,9 @@ func NewManager(config *Config, ds DataStoreInterface) *Manager {
 	m.Users = make(map[string]*User)
 
 	// source on our outgoing message/status bot/etc
+	m.StatusNick = "*status"
 	m.Source = "irc.goshubnc"
-	m.StatusSource = fmt.Sprintf("*status!bnc@%s", m.Source)
+	m.StatusSource = fmt.Sprintf("%s!bnc@%s", m.StatusNick, m.Source)
 
 	return m
 }
