@@ -97,6 +97,38 @@ func loadClientCommands() {
 		minParams:    1,
 		handler: func(listener *Listener, msg ircmsg.IrcMessage) {
 			// We're starting CAP negotiations so don't complete regisration until then
+			listener.regLocks.Set("cap", false)
+
+			availableCaps := map[string]string{
+				"account-notify": "",
+			}
+
+			command := getParam(&msg, 0)
+			if command == "LS" {
+				capList := ""
+				for cap, val := range availableCaps {
+					capList += cap
+					if val != "" {
+						capList += "=" + val
+					}
+					capList += " "
+				}
+				listener.Send(nil, "", "CAP", "*", "LS", capList)
+			} else if command == "REQ" {
+				caps := strings.Split(getParam(&msg, 1), " ")
+				acked := []string{}
+				for _, cap := range caps {
+					capVal, isAvailable := availableCaps[cap]
+					if isAvailable {
+						listener.Caps[cap] = capVal
+						acked = append(acked, cap)
+					}
+				}
+
+				listener.Send(nil, "", "CAP", "*", "ACK", strings.Join(acked, " "))
+			} else if command == "END" {
+				listener.regLocks.Set("cap", true)
+			}
 		},
 	}
 
@@ -117,4 +149,12 @@ func loadClientCommands() {
 			// Just ignore it as clients usually send QUIT when the client is closed
 		},
 	}
+}
+
+func getParam(msg *ircmsg.IrcMessage, idx int) string {
+	if len(msg.Params)-1 < idx {
+		return ""
+	}
+
+	return msg.Params[idx]
 }

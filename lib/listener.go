@@ -57,6 +57,7 @@ type Listener struct {
 
 	Manager          *Manager
 	ConnectTime      time.Time
+	Caps             map[string]string
 	ClientNick       string
 	Source           string
 	Registered       bool
@@ -79,6 +80,7 @@ func NewListener(m *Manager, conn net.Conn) {
 			User: false,
 			Pass: false,
 		},
+		Caps: make(map[string]string),
 	}
 
 	maxSendQBytes, _ := bytefmt.ToBytes("32k")
@@ -95,6 +97,11 @@ func NewListener(m *Manager, conn net.Conn) {
 
 	go listener.Socket.RunSocketWriter()
 	listener.RunSocketReader()
+}
+
+func (listener *Listener) IsCapEnabled(cap string) bool {
+	_, enabled := listener.Caps[cap]
+	return enabled
 }
 
 // tryRegistration dumps the registration blob and all if it hasn't been sent already.
@@ -204,6 +211,10 @@ func (listener *Listener) processIncomingLine(line string) {
 
 // Send sends an IRC line to the listener.
 func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, command string, params ...string) error {
+	if command == "ACCOUNT" && !listener.IsCapEnabled("account-notify") {
+		return nil
+	}
+
 	// send out the message
 	message := ircmsg.MakeMessage(tags, prefix, command, params...)
 	line, err := message.Line()
