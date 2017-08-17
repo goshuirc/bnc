@@ -58,6 +58,7 @@ type Listener struct {
 	Manager          *Manager
 	ConnectTime      time.Time
 	Caps             map[string]string
+	TagsEnabled      bool
 	ClientNick       string
 	Source           string
 	Registered       bool
@@ -216,7 +217,12 @@ func (listener *Listener) processIncomingLine(line string) {
 
 // Send sends an IRC line to the listener.
 func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, command string, params ...string) error {
-	message := ircmsg.MakeMessage(tags, prefix, command, params...)
+	var message ircmsg.IrcMessage
+	if listener.TagsEnabled {
+		message = ircmsg.MakeMessage(tags, prefix, command, params...)
+	} else {
+		message = ircmsg.MakeMessage(nil, prefix, command, params...)
+	}
 
 	shouldHalt := Capabilities.MessageToClient(listener, &message)
 	if shouldHalt {

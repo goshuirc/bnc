@@ -4,6 +4,7 @@
 package ircbnc
 
 import (
+	"fmt"
 	"strings"
 
 	"log"
@@ -99,7 +100,7 @@ func loadClientCommands() {
 			// We're starting CAP negotiations so don't complete regisration until then
 			listener.regLocks.Set("cap", false)
 
-			command := getParam(&msg, 0)
+			command := strings.ToUpper(getParam(&msg, 0))
 			if command == "LS" {
 				capList := Capabilities.AsString()
 				listener.Send(nil, "", "CAP", "*", "LS", capList)
@@ -115,7 +116,23 @@ func loadClientCommands() {
 					}
 				}
 
+				for _, cap := range acked {
+					Capabilities.InitCapOnListener(listener, cap)
+				}
+
 				listener.Send(nil, "", "CAP", "*", "ACK", strings.Join(acked, " "))
+
+			} else if command == "ENABLED" {
+				// Not in the spec, but just a handy command to debug caps in the client
+				line := ""
+				for cap, val := range listener.Caps {
+					line += cap
+					if val != "" {
+						line += "=" + val
+					}
+					line += " "
+				}
+				listener.SendLine(fmt.Sprintf(":%s NOTICE %s :%s", listener.Manager.Source, listener.ClientNick, line))
 
 			} else if command == "END" {
 				listener.regLocks.Set("cap", true)
