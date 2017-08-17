@@ -61,3 +61,10 @@ var HookListenerCloseName = "listener.close"
 type HookListenerClose struct {
 	Listener *Listener
 }
+
+var HookStateSentName = "listener.statesent"
+
+type HookStateSent struct {
+	Listener *Listener
+	Server   *ServerConnection
+}

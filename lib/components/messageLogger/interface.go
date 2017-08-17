@@ -8,12 +8,12 @@ import (
 )
 
 type MessageDatastore interface {
-	Store(*ircbnc.HookIrcRaw)
-	GetFromTime(string, time.Time, int) []ircmsg.IrcMessage
-	GetBeforeTime(string, time.Time, int) []ircmsg.IrcMessage
-	Search(string, string, time.Time, time.Time, int) []ircmsg.IrcMessage
+	Store(hookEvent *ircbnc.HookIrcRaw)
+	GetFromTime(userID string, networkID string, bufferName string, timeFrom time.Time, num int) []*ircmsg.IrcMessage
+	GetBeforeTime(userID string, networkID string, bufferName string, timeFrom time.Time, num int) []*ircmsg.IrcMessage
+	Search(userID string, networkID string, bufferName string, timeFrom time.Time, timeTo time.Time, num int) []*ircmsg.IrcMessage
 
-	//SupportsStore bool
-	//SupportsRetrieve bool
-	//SupportsSearch bool
+	SupportsStore() bool
+	SupportsRetrieve() bool
+	SupportsSearch() bool
 }

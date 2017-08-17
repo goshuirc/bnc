@@ -107,6 +107,11 @@ func (listener *Listener) tryRegistration() {
 		listener.DumpRegistration()
 		listener.Registered = true
 		listener.DumpChannels()
+
+		listener.Manager.Bus.Dispatch(HookStateSentName, &HookStateSent{
+			Listener: listener,
+			Server:   listener.ServerConnection,
+		})
 	}
 }
 
