@@ -24,6 +24,11 @@ func init() {
 
 	CapAwayNotify(&Capabilities)
 	CapServerTime(&Capabilities)
+	CapExtendedJoin(&Capabilities)
+	CapAccountNotify(&Capabilities)
+	CapAccountTag(&Capabilities)
+	CapInviteNotify(&Capabilities)
+	CapUserhostInNames(&Capabilities)
 }
 
 // SupportedString returns a list ready to send to the client of all our CAPs
@@ -106,6 +111,9 @@ func CapAwayNotify(caps *CapManager) {
 	)
 }
 
+/**
+ * CAP: server-time
+ */
 func CapServerTime(caps *CapManager) {
 	name := "server-time"
 	caps.Supported[name] = ""
@@ -132,4 +140,147 @@ func CapServerTime(caps *CapManager) {
 			return false
 		},
 	)
+}
+
+/**
+ * CAP: extended-join
+ */
+func CapExtendedJoin(caps *CapManager) {
+	name := "extended-join"
+	caps.Supported[name] = ""
+
+	caps.FnsMessageToClient = append(
+		caps.FnsMessageToClient,
+		func(listener *Listener, message *ircmsg.IrcMessage) bool {
+			// extened-join adds a param between params 1 + 2. Strip it out if the client
+			// doesn't support it.
+			if message.Command == "JOIN" && !listener.IsCapEnabled(name) && len(message.Params) == 3 {
+				message.Params = []string{message.Params[0], message.Params[1]}
+			}
+
+			return false
+		},
+	)
+}
+
+/**
+ * CAP: account-notify
+ */
+func CapAccountNotify(caps *CapManager) {
+	name := "account-notify"
+	caps.Supported[name] = ""
+
+	caps.FnsMessageToClient = append(
+		caps.FnsMessageToClient,
+		func(listener *Listener, message *ircmsg.IrcMessage) bool {
+			if message.Command == "ACCOUNT" && !listener.IsCapEnabled(name) {
+				return true
+			}
+
+			return false
+		},
+	)
+}
+
+/**
+ * CAP: account-tag
+ */
+func CapAccountTag(caps *CapManager) {
+	name := "account-tag"
+	caps.Supported[name] = ""
+
+	caps.FnsInitListener[name] = func(listener *Listener) {
+		listener.TagsEnabled = true
+	}
+
+	caps.FnsMessageToClient = append(
+		caps.FnsMessageToClient,
+		func(listener *Listener, message *ircmsg.IrcMessage) bool {
+			// If the client has not enabled account-tag, but we're about to send
+			// an account tag, then remove it
+			if !listener.IsCapEnabled(name) {
+				_, exists := message.Tags["account"]
+				if exists {
+					delete(message.Tags, "account")
+				}
+			}
+
+			return false
+		},
+	)
+}
+
+/**
+ * CAP: invite-notify
+ */
+func CapInviteNotify(caps *CapManager) {
+	name := "invite-notify"
+	caps.Supported[name] = ""
+
+	caps.FnsMessageToClient = append(
+		caps.FnsMessageToClient,
+		func(listener *Listener, message *ircmsg.IrcMessage) bool {
+			if message.Command == "INVITE" && !listener.IsCapEnabled(name) {
+				return true
+			}
+
+			return false
+		},
+	)
+}
+
+/**
+ * CAP: userhost-in-names
+ */
+func CapUserhostInNames(caps *CapManager) {
+	name := "userhost-in-names"
+	caps.Supported[name] = ""
+
+	caps.FnsMessageToClient = append(
+		caps.FnsMessageToClient,
+		func(listener *Listener, message *ircmsg.IrcMessage) bool {
+			// If the client hasn't enabled this cap, make sure that all names entries
+			// only consist of the nick and not a full mask.
+			if message.Command == "353" && !listener.IsCapEnabled(name) {
+				names := strings.Split(message.Params[3], " ")
+				for idx, name := range names {
+					nick, _, _ := explodeHostmask(name)
+					names[idx] = nick
+				}
+
+				message.Params[3] = strings.Join(names, " ")
+			}
+
+			return false
+		},
+	)
+}
+
+func explodeHostmask(mask string) (string, string, string) {
+	nick := ""
+	username := ""
+	host := ""
+
+	pos := 0
+
+	pos = strings.Index(mask, "!")
+	if pos > -1 {
+		nick = mask[0:pos]
+		mask = mask[pos+1:]
+	} else {
+		nick = mask
+		mask = ""
+	}
+
+	pos = strings.Index(mask, "@")
+	if pos > -1 {
+		username = mask[0:pos]
+		mask = mask[pos+1:]
+		host = mask
+	} else {
+		username = mask
+		host = ""
+	}
+
+	return nick, username, host
 }

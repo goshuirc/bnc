@@ -119,7 +119,7 @@ func (sc *ServerConnection) rawToListeners(message *ircmsg.IrcMessage) {
 	sc.ListenersLock.Lock()
 	for _, listener := range sc.Listeners {
 		if listener.Registered {
-			listener.SendLine(message.SourceLine)
+			listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
 		}
 	}
 	sc.ListenersLock.Unlock()
