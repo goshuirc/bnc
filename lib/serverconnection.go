@@ -15,9 +15,8 @@ import (
 
 // ServerConnection represents a connection to an IRC server.
 type ServerConnection struct {
-	Name string
-	User *User
-	// Connected bool
+	Name    string
+	User    *User
 	Enabled bool
 
 	Nickname   string
@@ -119,7 +118,7 @@ func (sc *ServerConnection) rawToListeners(message *ircmsg.IrcMessage) {
 	sc.ListenersLock.Lock()
 	for _, listener := range sc.Listeners {
 		if listener.Registered {
-			listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
+			listener.SendMessage(message)
 		}
 	}
 	sc.ListenersLock.Unlock()
@@ -153,7 +152,7 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 	// dump reg
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
-		listener.Send(&message.Tags, message.Prefix, message.Command, message.Params...)
+		listener.SendMessage(&message)
 	}
 
 	// change nick if user has a different one set

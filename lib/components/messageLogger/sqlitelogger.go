@@ -75,7 +75,7 @@ func (ds SqliteMessageDatastore) messageWriter() {
 		if !isOK {
 			break
 		}
-		println("Inserting message into db")
+
 		storeStmt.Exec(
 			message.user,
 			message.network,

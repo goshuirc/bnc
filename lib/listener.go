@@ -220,6 +220,11 @@ func (listener *Listener) processIncomingLine(line string) {
 	// return true
 }
 
+// SendMessage sends an IrcMessage to the listener
+func (listener *Listener) SendMessage(msg *ircmsg.IrcMessage) error {
+	return listener.Send(&msg.Tags, msg.Prefix, msg.Command, msg.Params...)
+}
+
 // Send sends an IRC line to the listener.
 func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, command string, params ...string) error {
 	var message ircmsg.IrcMessage
