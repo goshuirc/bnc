@@ -26,8 +26,8 @@ func init() {
 	CapServerTime(&Capabilities)
 }
 
-// AsString returns a list ready to send to the client of all our CAPs
-func (caps *CapManager) AsString() string {
+// SupportedString returns a list ready to send to the client of all our CAPs
+func (caps *CapManager) SupportedString() string {
 	capList := " "
 
 	for cap, val := range caps.Supported {
@@ -39,6 +39,20 @@ func (caps *CapManager) AsString() string {
 	}
 
 	return strings.Trim(capList, " ")
+}
+
+// FilterSupported filters the supported CAPs by the requested
+func (caps *CapManager) FilterSupported(requested []string) map[string]string {
+	matched := make(map[string]string)
+
+	for _, cap := range requested {
+		capVal, isAvailable := Capabilities.Supported[cap]
+		if isAvailable {
+			matched[cap] = capVal
+		}
+	}
+
+	return matched
 }
 
 // MessageToClient runs messages through any CAPs before being sent to the client

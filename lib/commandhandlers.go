@@ -102,22 +102,21 @@ func loadClientCommands() {
 
 			command := strings.ToUpper(getParam(&msg, 0))
 			if command == "LS" {
-				capList := Capabilities.AsString()
+				capList := Capabilities.SupportedString()
 				listener.Send(nil, "", "CAP", "*", "LS", capList)
 
 			} else if command == "REQ" {
-				caps := strings.Split(getParam(&msg, 1), " ")
-				acked := []string{}
-				for _, cap := range caps {
-					capVal, isAvailable := Capabilities.Supported[cap]
-					if isAvailable {
-						listener.Caps[cap] = capVal
-						acked = append(acked, cap)
-					}
-				}
+				requestedCaps := strings.Split(getParam(&msg, 1), " ")
+				canUseCaps := Capabilities.FilterSupported(requestedCaps)
 
-				for _, cap := range acked {
+				// This must be set before any .InitCapOnListener is run just incase a CAP
+				// being initialized depends on other CAPs being set too.
+				listener.Caps = canUseCaps
+
+				acked := []string{}
+				for cap := range canUseCaps {
 					Capabilities.InitCapOnListener(listener, cap)
+					acked = append(acked, cap)
 				}
 
 				listener.Send(nil, "", "CAP", "*", "ACK", strings.Join(acked, " "))
