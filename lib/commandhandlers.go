@@ -4,6 +4,7 @@
 package ircbnc
 
 import (
+	"fmt"
 	"strings"
 
 	"log"
@@ -97,6 +98,44 @@ func loadClientCommands() {
 		minParams:    1,
 		handler: func(listener *Listener, msg ircmsg.IrcMessage) {
 			// We're starting CAP negotiations so don't complete regisration until then
+			listener.regLocks.Set("cap", false)
+
+			command := strings.ToUpper(getParam(&msg, 0))
+			if command == "LS" {
+				capList := Capabilities.SupportedString()
+				listener.Send(nil, "", "CAP", "*", "LS", capList)
+
+			} else if command == "REQ" {
+				requestedCaps := strings.Split(getParam(&msg, 1), " ")
+				canUseCaps := Capabilities.FilterSupported(requestedCaps)
+
+				// This must be set before any .InitCapOnListener is run just incase a CAP
+				// being initialized depends on other CAPs being set too.
+				listener.Caps = canUseCaps
+
+				acked := []string{}
+				for cap := range canUseCaps {
+					Capabilities.InitCapOnListener(listener, cap)
+					acked = append(acked, cap)
+				}
+
+				listener.Send(nil, "", "CAP", "*", "ACK", strings.Join(acked, " "))
+
+			} else if command == "ENABLED" {
+				// Not in the spec, but just a handy command to debug caps in the client
+				line := ""
+				for cap, val := range listener.Caps {
+					line += cap
+					if val != "" {
+						line += "=" + val
+					}
+					line += " "
+				}
+				listener.SendLine(fmt.Sprintf(":%s NOTICE %s :%s", listener.Manager.Source, listener.ClientNick, line))
+
+			} else if command == "END" {
+				listener.regLocks.Set("cap", true)
+			}
 		},
 	}
 
@@ -117,4 +156,12 @@ func loadClientCommands() {
 			// Just ignore it as clients usually send QUIT when the client is closed
 		},
 	}
+}
+
+func getParam(msg *ircmsg.IrcMessage, idx int) string {
+	if len(msg.Params)-1 < idx {
+		return ""
+	}
+
+	return msg.Params[idx]
 }
