@@ -18,8 +18,10 @@ To update this folder:
 3. `dep ensure -update`
 4. `cd vendor`
 5. Commit the changes with the message `"Updated packages"`
-6. `cd ..`
-4. Commit the result with the message `"vendor: Updated submodules"`
+6. `git push origin master`
+7. `cd ..`
+8. Commit the result with the message `"vendor: Updated submodules"`
+9. Push the commit to the repo.
 
 This will make sure things stay nice and up-to-date for users.
 

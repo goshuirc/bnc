@@ -1,15 +1,9 @@
-memo = "29bfd0c6cd9dacdb2ea950f7ee6ba21478c126e79a040c2a6d955fbc6567a8aa"
+memo = "c642b75b53d97f17286c6807a684a63e8b00da9fe9c61018023c6feb55d3cab4"
 
 [[projects]]
   name = "code.cloudfoundry.org/bytefmt"
   packages = ["."]
   revision = "cbe033486cf0620d3bb77d8ef7f22ab346ad3628"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/DanielOaks/go-idn"
-  packages = ["idna2003/stringprep"]
-  revision = "76db0e10dc6513445bbe3e4f5b2289ff1fdac88d"
 
 [[projects]]
   name = "github.com/docopt/docopt-go"
@@ -25,15 +19,9 @@ memo = "29bfd0c6cd9dacdb2ea950f7ee6ba21478c126e79a040c2a6d955fbc6567a8aa"
 
 [[projects]]
   branch = "master"
-  name = "github.com/goshuirc/eventmgr"
-  packages = ["."]
-  revision = "060479027c934f620704224dbaf680d43176b011"
-
-[[projects]]
-  branch = "master"
   name = "github.com/goshuirc/irc-go"
-  packages = ["client","ircfmt","ircmap","ircmsg"]
-  revision = "ea7e22b650a0efd0aa223cdbf758b82959b40203"
+  packages = ["ircmsg"]
+  revision = "a5eafb7ec8061edf1ee666c8eb3b39bba3fe072f"
 
 [[projects]]
   name = "github.com/mattn/go-colorable"
@@ -52,6 +40,12 @@ memo = "29bfd0c6cd9dacdb2ea950f7ee6ba21478c126e79a040c2a6d955fbc6567a8aa"
   packages = ["."]
   revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
   version = "v0.0.2"
+
+[[projects]]
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "ca5e3819723d8eeaf170ad510e7da1d6d2e94a08"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -99,13 +93,19 @@ memo = "29bfd0c6cd9dacdb2ea950f7ee6ba21478c126e79a040c2a6d955fbc6567a8aa"
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["bcrypt","blowfish","ssh/terminal"]
-  revision = "b176d7def5d71bdd214203491f89843ed217f420"
+  revision = "eb71ad9bd329b5ac0fd0148dd99bd62e8be8e035"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = ["context"]
+  revision = "1c05540f6879653db88113bc4a2b70aec4bd491f"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "9f7170bcd8e9f4d3691c06401119c46a769a1e03"
+  revision = "07c182904dbd53199946ba614a412c61d3c548f5"
 
 [[projects]]
   branch = "master"
