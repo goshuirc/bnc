@@ -54,6 +54,11 @@ func onStateSent(hook interface{}) {
 		return
 	}
 
+	// Only send buffer history if we're connected to a network
+	if event.Server == nil {
+		return
+	}
+
 	for _, channel := range event.Server.Channels {
 		msgs := store.GetBeforeTime(event.Listener.User.ID, event.Server.Name, channel.Name, time.Now(), 50)
 		for _, message := range msgs {

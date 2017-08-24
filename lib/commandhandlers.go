@@ -85,6 +85,10 @@ func loadClientCommands() {
 			network, netExists := user.Networks[networkID]
 			if netExists {
 				network.AddListener(listener)
+
+				if !network.Foo.Connected {
+					go network.Connect()
+				}
 			} else {
 				log.Println("Network '" + networkID + "' doesnt exist")
 			}
