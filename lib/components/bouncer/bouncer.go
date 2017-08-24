@@ -50,35 +50,35 @@ func onMessage(hook interface{}) {
 
 func commandConnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
-		listener.SendLine("BOUNCER connect ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER connect * ERR_INVALIDARGS")
 	}
 
 	netName := params[0]
 	net := getNetworkByName(listener, netName)
 	if net == nil {
-		listener.SendLine("BOUNCER connect ERR_NETNOTFOUND " + netName)
+		listener.SendLine(fmt.Sprintf("BOUNCER connect %s ERR_NETNOTFOUND", netName))
 		return
 	}
 
-	listener.SendLine("BOUNCER state " + netName + " connecting")
+	listener.SendLine(fmt.Sprintf("BOUNCER state %s connecting", netName))
 	net.Connect()
 
 	if net.Foo.Connected {
-		listener.SendLine("BOUNCER state " + netName + " connected")
+		listener.SendLine(fmt.Sprintf("BOUNCER state connected", netName))
 	} else {
-		listener.SendLine("BOUNCER state " + netName + " disconnected")
+		listener.SendLine(fmt.Sprintf("BOUNCER state disconnected", netName))
 	}
 }
 
 func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
-		listener.SendLine("BOUNCER disconnect ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER disconnect * ERR_INVALIDARGS")
 	}
 
 	netName := params[0]
 	net := getNetworkByName(listener, netName)
 	if net == nil {
-		listener.SendLine("BOUNCER disconnect ERR_NETNOTFOUND " + netName)
+		listener.SendLine(fmt.Sprintf("BOUNCER disconnect %s ERR_NETNOTFOUND", netName))
 		return
 	}
 
@@ -163,13 +163,13 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 // [s] bouncer addnetwork RPL_OK freenode
 func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 1 {
-		listener.SendLine("BOUNCER addnetwork ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER addnetwork * ERR_INVALIDARGS")
 		return
 	}
 
 	vars, tagsErr := ircmsg.ParseTags(params[1])
 	if tagsErr != nil {
-		listener.SendLine("BOUNCER addnetwork ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER addnetwork * ERR_INVALIDARGS")
 		return
 	}
 
@@ -189,13 +189,13 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 	}
 
 	if netName == "" || netAddress == "" || netPort == 0 {
-		listener.SendLine("BOUNCER addnetwork ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER addnetwork * ERR_INVALIDARGS")
 		return
 	}
 
 	existingNet := getNetworkByName(listener, netName)
 	if existingNet != nil {
-		listener.SendLine("BOUNCER addnetwork ERR_NAMEINUSE " + existingNet.Name)
+		listener.SendLine("BOUNCER addnetwork " + existingNet.Name + " ERR_NAMEINUSE ")
 		return
 	}
 
@@ -226,9 +226,9 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 
 	saveErr := listener.Manager.Ds.SaveConnection(connection)
 	if saveErr != nil {
-		listener.SendLine("BOUNCER addnetwork ERR_UNKNOWN * :Error saving the network")
+		listener.SendLine("BOUNCER addnetwork " + netName + " ERR_UNKNOWN :Error saving the network")
 	} else {
-		listener.SendLine("BOUNCER addnetwork RPL_OK " + netName)
+		listener.SendLine("BOUNCER addnetwork " + netName + " RPL_OK")
 	}
 }
 
@@ -236,20 +236,20 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 // [s] bouncer changenetwork RPL_OK freenode
 func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 2 {
-		listener.SendLine("BOUNCER changenetwork ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER changenetwork * ERR_INVALIDARGS")
 		return
 	}
 
 	vars, tagsErr := ircmsg.ParseTags(params[1])
 	if tagsErr != nil {
-		listener.SendLine("BOUNCER changenetwork ERR_INVALIDARGS *")
+		listener.SendLine("BOUNCER changenetwork * ERR_INVALIDARGS")
 		return
 	}
 
 	netName := params[0]
 	net := getNetworkByName(listener, netName)
 	if net == nil {
-		listener.SendLine("BOUNCER changenetwork ERR_NETNOTFOUND *")
+		listener.SendLine("BOUNCER changenetwork * ERR_NETNOTFOUND")
 		return
 	}
 
@@ -287,9 +287,9 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 	}
 	saveErr := listener.Manager.Ds.SaveConnection(net)
 	if saveErr != nil {
-		listener.SendLine("BOUNCER changenetwork ERR_UNKNOWN * :Error saving the network")
+		listener.SendLine("BOUNCER changenetwork " + net.Name + " ERR_UNKNOWN :Error saving the network")
 	} else {
-		listener.SendLine("BOUNCER changenetwork RPL_OK " + net.Name)
+		listener.SendLine("BOUNCER changenetwork " + net.Name + " RPL_OK")
 	}
 }
 
