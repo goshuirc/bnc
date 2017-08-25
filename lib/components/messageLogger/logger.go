@@ -1,10 +1,15 @@
 package bncComponentLogger
 
 import (
+	"crypto/rand"
+	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/goshuirc/bnc/lib"
+	"github.com/goshuirc/irc-go/ircmsg"
 )
 
 var stores []MessageDatastore
@@ -36,6 +41,11 @@ func onMessage(hook interface{}) {
 
 	for _, store := range stores {
 		store.Store(event)
+	}
+
+	if event.Message.Command == "CHATHISTORY" {
+		event.Halt = true
+		handleChatHistory(event.Listener, &event.Message)
 	}
 }
 
@@ -70,4 +80,81 @@ func onStateSent(hook interface{}) {
 			event.Listener.SendLine(line)
 		}
 	}
+}
+
+func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
+	if !listener.IsCapEnabled("batch") {
+		return
+	}
+
+	if len(msg.Params) < 3 {
+		return
+	}
+
+	var store MessageDatastore
+	for _, s := range stores {
+		if s.SupportsRetrieve() {
+			store = s
+			break
+		}
+	}
+
+	target := msg.Params[0]
+	start := msg.Params[1]
+	end := msg.Params[2]
+
+	startParts := strings.SplitN(start, "=", 2)
+	if len(startParts) != 2 {
+		return
+	}
+	if startParts[0] != "timestamp" {
+	}
+
+	timeFrom, timeErr := time.Parse(time.RFC3339, startParts[1])
+	if timeErr != nil {
+		println(timeErr.Error())
+		return
+	}
+
+	endParts := strings.SplitN(end, "=", 2)
+	if len(endParts) != 2 {
+		return
+	}
+	if endParts[0] != "message_count" {
+	}
+
+	numMessages, _ := strconv.Atoi(endParts[1])
+	if numMessages > 50 {
+		numMessages = 50
+	}
+	if numMessages < 0 {
+		numMessages = 0
+	}
+
+	msgs := store.GetBeforeTime(listener.User.ID, listener.ServerConnection.Name, target, timeFrom, numMessages)
+
+	batchId := makeBatchId()
+	listener.Send(nil, "", "BATCH", "+"+batchId, "chathistory", target)
+
+	for _, message := range msgs {
+		message.Tags["batch"] = ircmsg.MakeTagValue(batchId)
+		line, err := message.Line()
+		if err != nil {
+			log.Println("Error building message from storage:", err.Error())
+			continue
+		}
+		listener.SendLine(line)
+	}
+
+	listener.Send(nil, "", "BATCH", "-"+batchId)
+}
+
+func makeBatchId() string {
+	length := 8
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	id := fmt.Sprintf("%X", b)
+	return id
 }

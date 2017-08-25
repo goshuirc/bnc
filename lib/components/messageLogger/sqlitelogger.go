@@ -127,7 +127,7 @@ func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, 
 		v.Value = time.Unix(int64(ts), 0).UTC().Format(time.RFC3339)
 		v.HasValue = true
 		mTags := make(map[string]ircmsg.TagValue)
-		mTags["server-time"] = v
+		mTags["time"] = v
 
 		mPrefix := from
 		mCommand := "PRIVMSG"
