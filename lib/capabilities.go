@@ -29,6 +29,7 @@ func init() {
 	CapAccountTag(&Capabilities)
 	CapInviteNotify(&Capabilities)
 	CapUserhostInNames(&Capabilities)
+	CapBatch(&Capabilities)
 }
 
 // SupportedString returns a list ready to send to the client of all our CAPs
@@ -254,6 +255,14 @@ func CapUserhostInNames(caps *CapManager) {
 			return false
 		},
 	)
+}
+
+/**
+ * CAP: batch
+ * Not used on it's own, but other commands such as CHATHISTORY make use of it
+ */
+func CapBatch(caps *CapManager) {
+	caps.Supported["batch"] = ""
 }
 
 func explodeHostmask(mask string) (string, string, string) {
