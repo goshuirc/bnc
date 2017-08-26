@@ -163,6 +163,11 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
 		listener.SendMessage(&message)
+
+		// Send any extra ISUPPORT lines after RPL_WELCOME has been sent
+		if message.Command == "RPL_WELCOME" {
+			listener.SendExtraISupports()
+		}
 	}
 
 	// change nick if user has a different one set

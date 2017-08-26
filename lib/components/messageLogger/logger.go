@@ -14,6 +14,8 @@ import (
 
 var stores []MessageDatastore
 
+const MaxRetrieveSize int = 50
+
 func Run(manager *ircbnc.Manager) {
 	for logType, logConf := range manager.Config.Bouncer.Logging {
 		if logType == "file" {
@@ -29,6 +31,12 @@ func Run(manager *ircbnc.Manager) {
 
 	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
 	manager.Bus.Register(ircbnc.HookStateSentName, onStateSent)
+	manager.Bus.Register(ircbnc.HookNewListenerName, onNewListener)
+}
+
+func onNewListener(hook interface{}) {
+	event := hook.(*ircbnc.HookNewListener)
+	event.Listener.ExtraISupports["CHATHISTORY"] = strconv.Itoa(MaxRetrieveSize)
 }
 
 func onMessage(hook interface{}) {
@@ -124,8 +132,8 @@ func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
 	}
 
 	numMessages, _ := strconv.Atoi(endParts[1])
-	if numMessages > 50 {
-		numMessages = 50
+	if numMessages > MaxRetrieveSize {
+		numMessages = MaxRetrieveSize
 	}
 	if numMessages < 0 {
 		numMessages = 0

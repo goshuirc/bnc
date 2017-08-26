@@ -11,6 +11,12 @@ import (
 
 func Run(manager *ircbnc.Manager) {
 	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
+	manager.Bus.Register(ircbnc.HookNewListenerName, onNewListener)
+}
+
+func onNewListener(hook interface{}) {
+	event := hook.(*ircbnc.HookNewListener)
+	event.Listener.ExtraISupports["BOUNCER"] = "1"
 }
 
 func onMessage(hook interface{}) {
