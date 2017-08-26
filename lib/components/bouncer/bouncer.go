@@ -101,6 +101,7 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 		vals := make(map[string]string)
 		vals["network"] = network.Name
 		vals["nick"] = network.Nickname
+		vals["user"] = network.Username
 		vals["host"] = network.Addresses[0].Host
 		vals["port"] = strconv.Itoa(network.Addresses[0].Port)
 		if network.Addresses[0].UseTLS {
@@ -173,7 +174,7 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 		return
 	}
 
-	vars, tagsErr := ircmsg.ParseTags(params[1])
+	vars, tagsErr := ircmsg.ParseTags(params[0])
 	if tagsErr != nil {
 		listener.SendLine("BOUNCER addnetwork * ERR_INVALIDARGS")
 		return
@@ -181,7 +182,7 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 
 	netName := tagValue(vars, "network", "")
 	netAddress := tagValue(vars, "host", "")
-	netPort, _ := strconv.Atoi(tagValue(vars, "network", "6667"))
+	netPort, _ := strconv.Atoi(tagValue(vars, "port", "6667"))
 	netPassword := tagValue(vars, "password", "")
 	netNick := tagValue(vars, "nick", "")
 	netUser := tagValue(vars, "user", "")
