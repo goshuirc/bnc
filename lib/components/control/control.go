@@ -1,6 +1,8 @@
 package bncComponentControl
 
 import (
+	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -48,6 +50,54 @@ func onMessage(hook interface{}) {
 	case "disconnect":
 		commandDisconnectNetwork(listener, params, msg)
 	}
+
+	// Admin commands
+	// TODO: The role apaprently isnt set or saved. do that.
+	if true || listener.User.Role == "Owner" {
+		switch command {
+		case "adduser":
+			commandAddUser(listener, params, msg)
+		}
+	}
+}
+
+func commandAddUser(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	if len(params) < 2 {
+		listener.SendStatus("Usage: adduser [username] [password]")
+		return
+	}
+
+	manager := listener.Manager
+	data := manager.Ds
+
+	newUsername := params[0]
+	newPassword := params[1]
+	_, exists := manager.Users[newUsername]
+	if exists {
+		listener.SendStatus("User " + newUsername + " already exists")
+		return
+	}
+
+	user := ircbnc.NewUser(listener.Manager)
+	user.Name = newUsername
+	user.Role = "User"
+	user.DefaultNick = newUsername
+	user.DefaultFbNick = newUsername + "_"
+	user.DefaultUser = newUsername
+	user.DefaultReal = newUsername
+	user.Permissions = []string{"*"}
+	data.SetUserPassword(user, newPassword)
+
+	err := data.SaveUser(user)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Could not create user info in database: %s", err.Error()))
+		return
+	}
+
+	// TODO: This should really be done in DataStore.SaveUser
+	manager.Users[user.ID] = user
+
+	listener.SendStatus("User " + newUsername + " added")
 }
 
 func commandConnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
