@@ -196,7 +196,7 @@ func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string)
 			// TODO: Extract the nick from the prefix
 			from = message.Prefix
 		}
-	} else if event.FromClient {
+	} else if event.FromClient && event.Listener.ServerConnection != nil {
 		switch message.Command {
 		case "PRIVMSG":
 			line = message.Params[1]

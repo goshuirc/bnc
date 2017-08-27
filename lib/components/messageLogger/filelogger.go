@@ -105,7 +105,7 @@ func createLineFromMessage(event *ircbnc.HookIrcRaw) (string, string) {
 			)
 			destination = message.Params[0]
 		}
-	} else if event.FromClient {
+	} else if event.FromClient && event.Listener.ServerConnection != nil {
 		switch message.Command {
 		case "PRIVMSG":
 			currentNick := event.Listener.ServerConnection.Nickname
