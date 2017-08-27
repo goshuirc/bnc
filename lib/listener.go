@@ -222,8 +222,10 @@ func (listener *Listener) processIncomingLine(line string) {
 
 	command, commandExists := ClientCommands[strings.ToUpper(msg.Command)]
 	if commandExists {
-		command.Run(listener, msg)
-		return
+		shouldHalt := command.Run(listener, msg)
+		if shouldHalt {
+			return
+		}
 	}
 
 	if listener.Registered {

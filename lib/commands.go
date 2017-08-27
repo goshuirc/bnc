@@ -17,25 +17,27 @@ func init() {
 
 // ClientCommand represents a command accepted on a listener.
 type ClientCommand struct {
-	handler      func(listener *Listener, msg ircmsg.IrcMessage)
+	handler      func(listener *Listener, msg ircmsg.IrcMessage) bool
 	usablePreReg bool
 	minParams    int
 }
 
 // Run runs this command with the given listener/message.
-func (cmd *ClientCommand) Run(listener *Listener, msg ircmsg.IrcMessage) {
+func (cmd *ClientCommand) Run(listener *Listener, msg ircmsg.IrcMessage) bool {
 	if !listener.Registered && !cmd.usablePreReg {
 		// command silently ignored
-		return
+		return true
 	}
 	if len(msg.Params) < cmd.minParams {
 		listener.Send(nil, "", "461", listener.ClientNick, msg.Command, "Not enough parameters")
-		return
+		return false
 	}
-	cmd.handler(listener, msg)
+	shouldHalt := cmd.handler(listener, msg)
 
 	// after each command, see if we can send registration to the listener
 	if !listener.Registered {
 		listener.tryRegistration()
 	}
+
+	return shouldHalt
 }
