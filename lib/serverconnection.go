@@ -159,6 +159,22 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 		return
 	}
 
+	// Wait until we're registered on the netork
+	for {
+		println("Wait loop", sc.Foo.HasRegistered, sc.Foo.Connected)
+		if !sc.Foo.HasRegistered && sc.Foo.Connected {
+			time.Sleep(time.Second * 1)
+		} else {
+			break
+		}
+	}
+
+	// Make sure we're still connected again.. in case we timed out during registration
+	if !sc.Foo.Connected {
+		listener.SendNilConnect()
+		return
+	}
+
 	// dump reg
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
