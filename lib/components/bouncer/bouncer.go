@@ -70,9 +70,9 @@ func commandConnectNetwork(listener *ircbnc.Listener, params []string, message i
 	net.Connect()
 
 	if net.Foo.Connected {
-		listener.SendLine(fmt.Sprintf("BOUNCER state connected", netName))
+		listener.SendLine(fmt.Sprintf("BOUNCER state %s connected", netName))
 	} else {
-		listener.SendLine(fmt.Sprintf("BOUNCER state disconnected", netName))
+		listener.SendLine(fmt.Sprintf("BOUNCER state %s disconnected", netName))
 	}
 }
 
