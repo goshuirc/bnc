@@ -6,8 +6,8 @@ package ircbnc
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"sync"
+	"time"
 
 	"github.com/goshuirc/bnc/lib/ircclient"
 	"github.com/goshuirc/irc-go/ircmsg"
@@ -143,7 +143,31 @@ func (sc *ServerConnection) connectLinesHandler(message *ircmsg.IrcMessage) {
 
 // DumpRegistration dumps the registration messages of this server to the given Listener.
 func (sc *ServerConnection) DumpRegistration(listener *Listener) {
+	// If in the middle of connecting, wait until we know if it connects or not
+	for {
+		if sc.Foo.Connecting {
+			time.Sleep(time.Second * 1)
+		} else {
+			break
+		}
+	}
+
 	// if server is not currently connected, just dump a nil connect
+	if !sc.Foo.Connected {
+		listener.SendNilConnect()
+		return
+	}
+
+	// Wait until we're registered on the netork
+	for {
+		if !sc.Foo.HasRegistered && sc.Foo.Connected {
+			time.Sleep(time.Second * 1)
+		} else {
+			break
+		}
+	}
+
+	// Make sure we're still connected again.. in case we timed out during registration
 	if !sc.Foo.Connected {
 		listener.SendNilConnect()
 		return
@@ -153,6 +177,11 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 	for _, message := range sc.connectMessages {
 		message.Params[0] = listener.ClientNick
 		listener.SendMessage(&message)
+
+		// Send any extra ISUPPORT lines after RPL_WELCOME has been sent
+		if message.Command == "RPL_WELCOME" {
+			listener.SendExtraISupports()
+		}
 	}
 
 	// change nick if user has a different one set
@@ -198,7 +227,7 @@ func (sc *ServerConnection) Start() {
 	}
 
 	if sc.Enabled {
-		sc.Connect()
+		go sc.Connect()
 	}
 }
 
@@ -212,7 +241,7 @@ func (sc *ServerConnection) Disconnect() {
 }
 
 func (sc *ServerConnection) Connect() {
-	if sc.Foo.Connected {
+	if sc.Foo.Connected || sc.Foo.Connecting {
 		return
 	}
 
@@ -237,6 +266,9 @@ func (sc *ServerConnection) Connect() {
 	if err != nil {
 		name := fmt.Sprintf("%s/%s", sc.User.ID, sc.Name)
 		fmt.Println("ERROR: Could not connect to", name, err.Error())
+		for _, listener := range sc.Listeners {
+			listener.SendStatus("Error connecting to " + name + ". " + err.Error())
+		}
 	} else {
 		// If not currently enabled, since we've just connected then mark as enabled and save the
 		// new connection state
@@ -264,7 +296,6 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 
 	//TODO(dan): Store the new channel in the datastore
 	//TODO(dan): On PARTs, remove the channel from the datastore as well
-	log.Println("adding channel", name)
 	sc.Channels[name] = ServerConnectionChannel{
 		Name:   name,
 		Key:    key,

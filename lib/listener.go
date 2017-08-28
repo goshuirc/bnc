@@ -58,6 +58,7 @@ type Listener struct {
 	Manager          *Manager
 	ConnectTime      time.Time
 	Caps             map[string]string
+	ExtraISupports   map[string]string
 	TagsEnabled      bool
 	ClientNick       string
 	Source           string
@@ -81,7 +82,8 @@ func NewListener(m *Manager, conn net.Conn) {
 			User: false,
 			Pass: false,
 		},
-		Caps: make(map[string]string),
+		Caps:           make(map[string]string),
+		ExtraISupports: make(map[string]string),
 	}
 
 	maxSendQBytes, _ := bytefmt.ToBytes("32k")
@@ -132,9 +134,27 @@ func (listener *Listener) DumpRegistration() {
 	}
 }
 
+func (listener *Listener) SendExtraISupports() {
+	params := []string{listener.ClientNick}
+
+	for token, val := range listener.ExtraISupports {
+		if val != "" {
+			params = append(params, fmt.Sprintf("%s=%s", token, val))
+		} else {
+			params = append(params, token)
+		}
+	}
+
+	params = append(params, "are supported by this server")
+
+	isupportMessage := ircmsg.MakeMessage(nil, listener.Manager.Source, "005", params...)
+	listener.SendMessage(&isupportMessage)
+}
+
 // SendNilConnect sends a connection init (001+ERR_NOMOTD) to the listener when they are not connected to a server.
 func (listener *Listener) SendNilConnect() {
 	listener.Send(nil, listener.Source, "001", listener.ClientNick, "- Welcome to GoshuBNC -")
+	listener.SendExtraISupports()
 	listener.Send(nil, listener.Source, "422", listener.ClientNick, "MOTD File is missing")
 	listener.Send(nil, listener.Manager.StatusSource, "NOTICE", listener.ClientNick, "You are not connected to any specific network")
 	listener.Send(nil, listener.Manager.StatusSource, "NOTICE", listener.ClientNick, fmt.Sprintf("If you want to connect to a network, connect with the server password %s/<network>:<password>", "<username>"))
@@ -202,8 +222,10 @@ func (listener *Listener) processIncomingLine(line string) {
 
 	command, commandExists := ClientCommands[strings.ToUpper(msg.Command)]
 	if commandExists {
-		command.Run(listener, msg)
-		return
+		shouldHalt := command.Run(listener, msg)
+		if shouldHalt {
+			return
+		}
 	}
 
 	if listener.Registered {

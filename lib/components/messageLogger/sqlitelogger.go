@@ -110,7 +110,7 @@ func (ds SqliteMessageDatastore) GetFromTime(userID string, networkID string, bu
 func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
 	messages := []*ircmsg.IrcMessage{}
 
-	sql := "SELECT ts, fromNick, type, line FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts < ? ORDER BY ts LIMIT ?"
+	sql := "SELECT ts, fromNick, type, line FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts < ? ORDER BY ts DESC LIMIT ?"
 	rows, err := ds.db.Query(sql, userID, networkID, strings.ToLower(buffer), int32(from.UTC().Unix()), num)
 	if err != nil {
 		log.Println("GetBeforeTime() error: " + err.Error())
@@ -127,7 +127,7 @@ func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, 
 		v.Value = time.Unix(int64(ts), 0).UTC().Format(time.RFC3339)
 		v.HasValue = true
 		mTags := make(map[string]ircmsg.TagValue)
-		mTags["server-time"] = v
+		mTags["time"] = v
 
 		mPrefix := from
 		mCommand := "PRIVMSG"
@@ -144,6 +144,12 @@ func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, 
 
 		m := ircmsg.MakeMessage(&mTags, mPrefix, mCommand, mParams...)
 		messages = append(messages, &m)
+	}
+
+	// Reverse the messages so they're in order
+	for i := 0; i < len(messages)/2; i++ {
+		j := len(messages) - i - 1
+		messages[i], messages[j] = messages[j], messages[i]
 	}
 
 	// TODO: Private messages should be stored with the buffer name as the other user.
@@ -190,7 +196,7 @@ func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string)
 			// TODO: Extract the nick from the prefix
 			from = message.Prefix
 		}
-	} else if event.FromClient {
+	} else if event.FromClient && event.Listener.ServerConnection != nil {
 		switch message.Command {
 		case "PRIVMSG":
 			line = message.Params[1]

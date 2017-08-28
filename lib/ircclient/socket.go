@@ -20,6 +20,7 @@ type Socket struct {
 	Conn       net.Conn
 	ConnLock   sync.Mutex
 	Connected  bool
+	Connecting bool
 	MessagesIn chan ircmsg.IrcMessage
 }
 
@@ -29,6 +30,7 @@ func NewSocket() *Socket {
 
 func (socket *Socket) Connect() error {
 	socket.Connected = false
+	socket.Connecting = true
 
 	destination := net.JoinHostPort(socket.Host, strconv.Itoa(socket.Port))
 
@@ -40,6 +42,9 @@ func (socket *Socket) Connect() error {
 	} else {
 		conn, err = net.Dial("tcp", destination)
 	}
+
+	socket.Connecting = false
+
 	if err != nil {
 		return err
 	}
