@@ -202,7 +202,7 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 
 	existingNet := getNetworkByName(listener, netName)
 	if existingNet != nil {
-		listener.SendLine("BOUNCER addnetwork " + existingNet.Name + " ERR_NAMEINUSE ")
+		listener.SendLine("BOUNCER addnetwork " + existingNet.Name + " ERR_NAMEINUSE")
 		return
 	}
 

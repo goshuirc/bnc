@@ -53,7 +53,7 @@ func onMessage(hook interface{}) {
 
 	// Admin commands
 	// TODO: The role apaprently isnt set or saved. do that.
-	if true || listener.User.Role == "Owner" {
+	if listener.User.Role == "Owner" {
 		switch command {
 		case "adduser":
 			commandAddUser(listener, params, msg)
