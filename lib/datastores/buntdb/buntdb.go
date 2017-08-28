@@ -260,9 +260,6 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 func (ds *DataStore) loadUser(tx *buntdb.Tx, userId string) (*ircbnc.User, error) {
 	user := ircbnc.NewUser(ds.Manager)
 
-	user.ID = userId
-	user.Name = userId //TODO(dan): Store Name and ID separately in the future if we want to
-
 	infoString, err := tx.Get(fmt.Sprintf(KeyUserInfo, userId))
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (loading user info from db): %s", err.Error())
@@ -283,6 +280,10 @@ func (ds *DataStore) loadUser(tx *buntdb.Tx, userId string) (*ircbnc.User, error
 	if err != nil {
 		return nil, fmt.Errorf("Could not load user (decoding password): %s", err.Error())
 	}
+
+	user.ID = ui.ID
+	user.Name = ui.Name
+	user.Role = ui.Role
 	user.DefaultNick = ui.DefaultNick
 	user.DefaultFbNick = ui.DefaultNickFallback
 	user.DefaultUser = ui.DefaultUsername
