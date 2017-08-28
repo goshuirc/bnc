@@ -6,7 +6,6 @@ package ircbnc
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -161,7 +160,6 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 
 	// Wait until we're registered on the netork
 	for {
-		println("Wait loop", sc.Foo.HasRegistered, sc.Foo.Connected)
 		if !sc.Foo.HasRegistered && sc.Foo.Connected {
 			time.Sleep(time.Second * 1)
 		} else {
@@ -298,7 +296,6 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 
 	//TODO(dan): Store the new channel in the datastore
 	//TODO(dan): On PARTs, remove the channel from the datastore as well
-	log.Println("adding channel", name)
 	sc.Channels[name] = ServerConnectionChannel{
 		Name:   name,
 		Key:    key,

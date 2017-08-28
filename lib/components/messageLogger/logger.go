@@ -120,7 +120,7 @@ func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
 
 	timeFrom, timeErr := time.Parse(time.RFC3339, startParts[1])
 	if timeErr != nil {
-		println(timeErr.Error())
+		log.Println("Error parsing date for CHATHISTORY: " + timeErr.Error())
 		return
 	}
 
