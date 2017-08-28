@@ -64,6 +64,7 @@ func loadClientCommands() {
 
 			if len(splitString) < 2 {
 				listener.Send(nil, "", "ERROR", `Password must be of the format "<username>/<network>:<password>"`)
+				listener.Socket.Close()
 				return true
 			}
 
@@ -79,7 +80,8 @@ func loadClientCommands() {
 
 			authedUserId, authSuccess := listener.Manager.Ds.AuthUser(userid, password)
 			if !authSuccess {
-				listener.Send(nil, "", "ERROR", "Invalid username or password")
+				listener.Socket.SetFinalData(fmt.Sprintf(":%s 464 %s :Invalid password\n", listener.Manager.Source, listener.ClientNick))
+				listener.Socket.Close()
 				return true
 			}
 
