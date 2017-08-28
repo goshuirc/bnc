@@ -28,7 +28,7 @@ const (
 
 	KeyServerConnectionInfo      = "user.server.info %s %s"
 	KeyServerConnectionAddresses = "user.server.addresses %s %s"
-	KeyServerConnectionChannels  = "user.server.channels %s %s"
+	KeyServerConnectionBuffers   = "user.server.channels %s %s"
 )
 
 // these are types used to store information in / retrieve information from the database
@@ -68,11 +68,12 @@ type ServerConnectionAddressMapping struct {
 	VerifyTLS bool `json:"verify-tls"`
 }
 
-// ServerConnectionChannelMapping maps ServerConnectionChannel to its JSON structure
-type ServerConnectionChannelMapping struct {
-	Name   string
-	Key    string
-	UseKey bool `json:"use-key"`
+// ServerConnectionBufferMapping maps ServerConnectionBuffer to its JSON structure
+type ServerConnectionBufferMapping struct {
+	Channel bool
+	Name    string
+	Key     string
+	UseKey  bool `json:"use-key"`
 }
 
 // InitDB creates the database.

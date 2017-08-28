@@ -23,7 +23,7 @@ type ServerConnection struct {
 	FbNickname string
 	Username   string
 	Realname   string
-	Channels   map[string]ServerConnectionChannel
+	Buffers    map[string]ServerConnectionBuffer
 
 	receiveLines  chan *string
 	ReceiveEvents chan Message
@@ -57,13 +57,14 @@ type ServerConnectionAddress struct {
 
 type ServerConnectionAddresses []ServerConnectionAddress
 
-type ServerConnectionChannel struct {
-	Name   string
-	Key    string
-	UseKey bool
+type ServerConnectionBuffer struct {
+	Channel bool
+	Name    string
+	Key     string
+	UseKey  bool
 }
 
-type ServerConnectionChannels []ServerConnectionChannel
+type ServerConnectionBuffers []ServerConnectionBuffer
 
 //TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{
@@ -192,10 +193,12 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 }
 
 func (sc *ServerConnection) DumpChannels(listener *Listener) {
-	for channel := range sc.Channels {
-		//TODO(dan): add channel keys and enabled/disable bool here
-		listener.Send(nil, sc.Foo.Nick, "JOIN", channel)
-		sc.Foo.WriteLine("NAMES %s", channel)
+	for _, buffer := range sc.Buffers {
+		if buffer.Channel {
+			//TODO(dan): add channel keys and enabled/disable bool here
+			listener.Send(nil, sc.Foo.Nick, "JOIN", buffer.Name)
+			sc.Foo.WriteLine("NAMES %s", buffer.Name)
+		}
 	}
 }
 
@@ -222,7 +225,7 @@ func (sc *ServerConnection) Start() {
 	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
 	sc.Foo.HandleCommand("JOIN", sc.handleJoin)
 
-	for _, channel := range sc.Channels {
+	for _, channel := range sc.Buffers {
 		sc.Foo.JoinChannel(channel.Name, channel.Key)
 	}
 
@@ -296,10 +299,11 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 
 	//TODO(dan): Store the new channel in the datastore
 	//TODO(dan): On PARTs, remove the channel from the datastore as well
-	sc.Channels[name] = ServerConnectionChannel{
-		Name:   name,
-		Key:    key,
-		UseKey: useKey,
+	sc.Buffers[name] = ServerConnectionBuffer{
+		Channel: true,
+		Name:    name,
+		Key:     key,
+		UseKey:  useKey,
 	}
 
 }

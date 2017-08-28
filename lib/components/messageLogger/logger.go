@@ -77,8 +77,8 @@ func onStateSent(hook interface{}) {
 		return
 	}
 
-	for _, channel := range event.Server.Channels {
-		msgs := store.GetBeforeTime(event.Listener.User.ID, event.Server.Name, channel.Name, time.Now(), 50)
+	for _, buffer := range event.Server.Buffers {
+		msgs := store.GetBeforeTime(event.Listener.User.ID, event.Server.Name, buffer.Name, time.Now(), 50)
 		for _, message := range msgs {
 			line, err := message.Line()
 			if err != nil {

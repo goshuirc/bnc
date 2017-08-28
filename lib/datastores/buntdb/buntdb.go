@@ -227,8 +227,8 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
 
 	// Store server channels (Convert the string map to a slice)
-	scChannels := []ircbnc.ServerConnectionChannel{}
-	for _, channel := range connection.Channels {
+	scChannels := []ircbnc.ServerConnectionBuffer{}
+	for _, channel := range connection.Buffers {
 		scChannels = append(scChannels, channel)
 	}
 	scChanBytes, err := json.Marshal(scChannels)
@@ -247,7 +247,7 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 		if err != nil {
 			return err
 		}
-		_, _, err = tx.Set(fmt.Sprintf(KeyServerConnectionChannels, connection.User.ID, connection.Name), scChanString, nil)
+		_, _, err = tx.Set(fmt.Sprintf(KeyServerConnectionBuffers, connection.User.ID, connection.Name), scChanString, nil)
 		if err != nil {
 			return err
 		}
@@ -354,23 +354,24 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 	}
 
 	// load channels
-	scChannelString, err := tx.Get(fmt.Sprintf(KeyServerConnectionChannels, user.ID, name))
+	scChannelString, err := tx.Get(fmt.Sprintf(KeyServerConnectionBuffers, user.ID, name))
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (getting sc channels from db): %s", err.Error())
 	}
 
-	scChans := &[]ServerConnectionChannelMapping{}
+	scChans := &[]ServerConnectionBufferMapping{}
 	err = json.Unmarshal([]byte(scChannelString), scChans)
 	if err != nil {
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
 	}
 
-	sc.Channels = make(map[string]ircbnc.ServerConnectionChannel)
+	sc.Buffers = make(map[string]ircbnc.ServerConnectionBuffer)
 	for _, channel := range *scChans {
-		sc.Channels[channel.Name] = ircbnc.ServerConnectionChannel{
-			Name:   channel.Name,
-			Key:    channel.Key,
-			UseKey: channel.UseKey,
+		sc.Buffers[channel.Name] = ircbnc.ServerConnectionBuffer{
+			Channel: channel.Channel,
+			Name:    channel.Name,
+			Key:     channel.Key,
+			UseKey:  channel.UseKey,
 		}
 
 	}

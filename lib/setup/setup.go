@@ -317,7 +317,7 @@ func InitialSetup(manager *ircbnc.Manager) {
 			log.Fatal(err.Error())
 		}
 
-		var serverChannels ircbnc.ServerConnectionChannels
+		var serverChannels ircbnc.ServerConnectionBuffers
 		for {
 			serverChannelsString, err := Query("Channels to autojoin (separated by spaces): ")
 			if err != nil {
@@ -330,8 +330,9 @@ func InitialSetup(manager *ircbnc.Manager) {
 					break
 				}
 
-				serverChannels = append(serverChannels, ircbnc.ServerConnectionChannel{
-					Name: channel,
+				serverChannels = append(serverChannels, ircbnc.ServerConnectionBuffer{
+					Channel: true,
+					Name:    channel,
 				})
 			}
 
@@ -355,7 +356,7 @@ func InitialSetup(manager *ircbnc.Manager) {
 		}
 		connection.Addresses = append(connection.Addresses, newAddress)
 		for _, channel := range serverChannels {
-			connection.Channels[channel.Name] = channel
+			connection.Buffers[channel.Name] = channel
 		}
 
 		err = data.SaveConnection(connection)

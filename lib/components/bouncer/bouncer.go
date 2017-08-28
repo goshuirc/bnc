@@ -144,7 +144,7 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 	}
 
 	// TODO: Also list any open query buffers we have
-	for _, channel := range net.Channels {
+	for _, channel := range net.Buffers {
 		vals := make(map[string]string)
 		vals["network"] = net.Name
 		vals["buffer"] = channel.Name
