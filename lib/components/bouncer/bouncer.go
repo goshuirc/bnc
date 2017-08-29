@@ -104,6 +104,8 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 		vals["user"] = network.Username
 		vals["host"] = network.Addresses[0].Host
 		vals["port"] = strconv.Itoa(network.Addresses[0].Port)
+		vals["password"] = network.Password
+
 		if network.Addresses[0].UseTLS {
 			vals["tls"] = "1"
 		} else {
@@ -271,7 +273,7 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 		net.Addresses[0].Host = netAddress
 	}
 
-	netPort, _ := strconv.Atoi(tagValue(vars, "network", "6667"))
+	netPort, _ := strconv.Atoi(tagValue(vars, "port", "6667"))
 	if netPort > 0 {
 		net.Addresses[0].Port = netPort
 	}
