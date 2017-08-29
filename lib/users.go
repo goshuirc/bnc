@@ -34,6 +34,8 @@ func NewUser(manager *Manager) *User {
 // StartServerConnections starts running the server connections of this user.
 func (user *User) StartServerConnections() {
 	for _, sc := range user.Networks {
-		sc.Start()
+		if sc.Enabled {
+			go sc.Connect()
+		}
 	}
 }

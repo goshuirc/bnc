@@ -186,6 +186,7 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 	netPassword := tagValue(vars, "password", "")
 	netNick := tagValue(vars, "nick", "")
 	netUser := tagValue(vars, "user", "")
+	netRealname := tagValue(vars, "realname", "")
 
 	netTls := false
 	varTls := tagValue(vars, "tls", "0")
@@ -214,12 +215,17 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 	if netNick != "" {
 		connection.Nickname = netNick
 	} else {
-		connection.Nickname = listener.User.Name
+		connection.Nickname = listener.User.DefaultNick
 	}
 	if netUser != "" {
 		connection.Username = netUser
 	} else {
-		connection.Username = listener.User.Name
+		connection.Username = listener.User.DefaultUser
+	}
+	if netRealname != "" {
+		connection.Realname = netRealname
+	} else {
+		connection.Realname = listener.User.DefaultReal
 	}
 
 	newAddress := ircbnc.ServerConnectionAddress{

@@ -41,12 +41,22 @@ type ServerConnection struct {
 }
 
 func NewServerConnection() *ServerConnection {
-	return &ServerConnection{
+	sc := &ServerConnection{
 		storingConnectMessages: true,
 		receiveLines:           make(chan *string),
 		ReceiveEvents:          make(chan Message),
 		Foo:                    ircclient.NewClient(),
 	}
+
+	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.updateNickHandler)
+	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.joinSavedChannels)
+	sc.Foo.HandleCommand("NICK", sc.updateNickHandler)
+	sc.Foo.HandleCommand("ALL", sc.connectLinesHandler)
+	sc.Foo.HandleCommand("ALL", sc.rawToListeners)
+	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
+	sc.Foo.HandleCommand("JOIN", sc.handleJoin)
+
+	return sc
 }
 
 type ServerConnectionAddress struct {
@@ -127,6 +137,15 @@ func (sc *ServerConnection) updateNickHandler(message *ircmsg.IrcMessage) {
 	for _, listener := range sc.Listeners {
 		if listener.Registered && sc.Foo.Nick != listener.ClientNick {
 			listener.ClientNick = sc.Foo.Nick
+		}
+	}
+}
+
+func (sc *ServerConnection) joinSavedChannels(message *ircmsg.IrcMessage) {
+	// Join our channels
+	for _, channel := range sc.Buffers {
+		if channel.Channel {
+			sc.Foo.JoinChannel(channel.Name, channel.Key)
 		}
 	}
 }
@@ -239,27 +258,12 @@ func (sc *ServerConnection) AddListener(listener *Listener) {
 	listener.ServerConnection = sc
 }
 
-// Start opens and starts connecting to the server.
-func (sc *ServerConnection) Start() {
-	sc.Foo.Nick = sc.Nickname
-	sc.Foo.Username = sc.Username
-	sc.Foo.Realname = sc.Realname
-	sc.Foo.Password = sc.Password
-
-	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.updateNickHandler)
-	sc.Foo.HandleCommand("NICK", sc.updateNickHandler)
-	sc.Foo.HandleCommand("ALL", sc.connectLinesHandler)
-	sc.Foo.HandleCommand("ALL", sc.rawToListeners)
-	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
-	sc.Foo.HandleCommand("JOIN", sc.handleJoin)
-
-	for _, channel := range sc.Buffers {
-		sc.Foo.JoinChannel(channel.Name, channel.Key)
+func (sc *ServerConnection) ReadyToConnect() bool {
+	if sc.Nickname == "" || sc.Username == "" || sc.Realname == "" {
+		return false
 	}
 
-	if sc.Enabled {
-		go sc.Connect()
-	}
+	return true
 }
 
 func (sc *ServerConnection) Disconnect() {
@@ -275,6 +279,15 @@ func (sc *ServerConnection) Connect() {
 	if sc.Foo.Connected || sc.Foo.Connecting {
 		return
 	}
+
+	if !sc.ReadyToConnect() {
+		return
+	}
+
+	sc.Foo.Nick = sc.Nickname
+	sc.Foo.Username = sc.Username
+	sc.Foo.Realname = sc.Realname
+	sc.Foo.Password = sc.Password
 
 	var err error
 	for _, address := range sc.Addresses {
