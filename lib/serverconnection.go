@@ -6,6 +6,7 @@ package ircbnc
 import (
 	"crypto/tls"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,7 +24,7 @@ type ServerConnection struct {
 	FbNickname string
 	Username   string
 	Realname   string
-	Buffers    map[string]ServerConnectionBuffer
+	Buffers    ServerConnectionBuffers
 
 	receiveLines  chan *string
 	ReceiveEvents chan Message
@@ -64,7 +65,34 @@ type ServerConnectionBuffer struct {
 	UseKey  bool
 }
 
-type ServerConnectionBuffers []ServerConnectionBuffer
+type ServerConnectionBuffers map[string]ServerConnectionBuffer
+
+func (buffers *ServerConnectionBuffers) Map() map[string]ServerConnectionBuffer {
+	return map[string]ServerConnectionBuffer(*buffers)
+}
+
+func (buffers *ServerConnectionBuffers) Get(findName string) *ServerConnectionBuffer {
+	findName = strings.ToLower(findName)
+
+	for _, buffer := range buffers.Map() {
+		if strings.ToLower(buffer.Name) == findName {
+			return &buffer
+		}
+	}
+
+	return nil
+}
+
+func (buffers *ServerConnectionBuffers) Remove(name string) {
+	name = strings.ToLower(name)
+	ar := buffers.Map()
+
+	for bufferName, buffer := range ar {
+		if strings.ToLower(buffer.Name) == name {
+			delete(ar, bufferName)
+		}
+	}
+}
 
 //TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{

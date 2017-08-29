@@ -176,7 +176,7 @@ func loadClientCommands() {
 		minParams:    1,
 		handler: func(listener *Listener, msg ircmsg.IrcMessage) bool {
 			channelName := msg.Params[0]
-			delete(listener.ServerConnection.Buffers, channelName)
+			listener.ServerConnection.Buffers.Remove(channelName)
 			listener.Manager.Ds.SaveConnection(listener.ServerConnection)
 			return false
 		},

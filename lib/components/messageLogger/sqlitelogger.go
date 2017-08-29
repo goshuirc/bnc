@@ -80,7 +80,7 @@ func (ds SqliteMessageDatastore) messageWriter() {
 			message.user,
 			message.network,
 			message.ts,
-			message.buffer,
+			strings.ToLower(message.buffer),
 			message.from,
 			message.messageType,
 			message.line,

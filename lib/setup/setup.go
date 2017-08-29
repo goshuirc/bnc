@@ -330,10 +330,10 @@ func InitialSetup(manager *ircbnc.Manager) {
 					break
 				}
 
-				serverChannels = append(serverChannels, ircbnc.ServerConnectionBuffer{
+				serverChannels[channel] = ircbnc.ServerConnectionBuffer{
 					Channel: true,
 					Name:    channel,
-				})
+				}
 			}
 
 			if err != nil {
