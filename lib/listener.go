@@ -228,7 +228,8 @@ func (listener *Listener) processIncomingLine(line string) {
 		}
 	}
 
-	if listener.Registered {
+	// Forward the data
+	if listener.Registered && listener.ServerConnection != nil {
 		line, _ := msg.Line()
 		_, err := listener.ServerConnection.Foo.WriteLine(line)
 		if err != nil {
