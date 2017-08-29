@@ -91,6 +91,9 @@ func (client *Client) Connect() error {
 
 	go client.messageDispatcher()
 
+	if client.Password != "" {
+		client.WriteLine("PASS " + client.Password)
+	}
 	client.WriteLine("CAP LS 302")
 	client.WriteLine("NICK %s", client.Nick)
 	client.WriteLine("USER %s 0 * :%s", client.Username, client.Realname)
