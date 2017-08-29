@@ -126,6 +126,10 @@ var storedConnectLines = map[string]bool{
 	ircclient.ERR_NOMOTD:    true,
 }
 
+func (sc *ServerConnection) Save() error {
+	return BNC.Ds.SaveConnection(sc)
+}
+
 // disconnectHandler extracts and stores .
 func (sc *ServerConnection) disconnectHandler(message *ircmsg.IrcMessage) {
 	for _, listener := range sc.Listeners {
@@ -340,8 +344,6 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 		useKey = true
 	}
 
-	//TODO(dan): Store the new channel in the datastore
-	//TODO(dan): On PARTs, remove the channel from the datastore as well
 	sc.Buffers[name] = ServerConnectionBuffer{
 		Channel: true,
 		Name:    name,
@@ -349,6 +351,7 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 		UseKey:  useKey,
 	}
 
+	sc.Save()
 }
 
 func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
@@ -367,5 +370,7 @@ func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
 			Channel: false,
 			Name:    prefixNick,
 		}
+
+		sc.Save()
 	}
 }

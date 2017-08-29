@@ -359,7 +359,7 @@ func InitialSetup(manager *ircbnc.Manager) {
 			connection.Buffers[channel.Name] = channel
 		}
 
-		err = data.SaveConnection(connection)
+		err = connection.Save()
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Could not create server connection [%s] in database: %s", goodNetName, err.Error()))
 			return

@@ -18,6 +18,9 @@ var (
 	// QuitSignals is the list of signals we quit on
 	//TODO(dan): Rehash on one of these signals instead, same as Oragono.
 	QuitSignals = []os.Signal{syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGQUIT}
+	// BNC: The global instance of Manager.
+	// TODO: NewManager() sets this each time it's run. It's only run once so no issue.. but it's not tidy
+	BNC *Manager
 )
 
 // Manager handles the different components that keep GoshuBNC spinning.
@@ -43,6 +46,8 @@ type Manager struct {
 // NewManager create a new IRC bouncer from the given config and database.
 func NewManager(config *Config, ds DataStoreInterface) *Manager {
 	m := &Manager{}
+	BNC = m
+
 	m.Bus = MakeHookEmitter()
 	m.Config = config
 
