@@ -55,6 +55,8 @@ func NewServerConnection() *ServerConnection {
 	sc.Foo.HandleCommand("ALL", sc.rawToListeners)
 	sc.Foo.HandleCommand("CLOSED", sc.disconnectHandler)
 	sc.Foo.HandleCommand("JOIN", sc.handleJoin)
+	sc.Foo.HandleCommand("PRIVMSG", sc.maybeCreateQueryBuffer)
+	sc.Foo.HandleCommand("NOTICE", sc.maybeCreateQueryBuffer)
 
 	return sc
 }
@@ -347,4 +349,23 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 		UseKey:  useKey,
 	}
 
+}
+
+func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
+	params := message.Params
+
+	if len(params) < 1 {
+		// invalid JOIN message
+		return
+	}
+
+	prefixNick, _, _ := SplitMask(message.Prefix)
+	isPm := strings.ToLower(params[0]) == sc.Foo.Nick
+
+	if isPm && sc.Buffers.Get(prefixNick) == nil {
+		sc.Buffers[prefixNick] = ServerConnectionBuffer{
+			Channel: false,
+			Name:    prefixNick,
+		}
+	}
 }

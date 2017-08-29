@@ -245,7 +245,7 @@ func CapUserhostInNames(caps *CapManager) {
 			if message.Command == "353" && !listener.IsCapEnabled(name) {
 				names := strings.Split(message.Params[3], " ")
 				for idx, name := range names {
-					nick, _, _ := explodeHostmask(name)
+					nick, _, _ := SplitMask(name)
 					names[idx] = nick
 				}
 
@@ -265,7 +265,7 @@ func CapBatch(caps *CapManager) {
 	caps.Supported["batch"] = ""
 }
 
-func explodeHostmask(mask string) (string, string, string) {
+func SplitMask(mask string) (string, string, string) {
 	nick := ""
 	username := ""
 	host := ""

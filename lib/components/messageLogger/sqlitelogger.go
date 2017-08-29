@@ -166,6 +166,9 @@ func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string)
 	line := ""
 
 	message := event.Message
+	server := event.Server
+
+	prefixNick, _, _ := ircbnc.SplitMask(message.Prefix)
 
 	if event.FromServer {
 		switch message.Command {
@@ -180,9 +183,13 @@ func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string)
 				return "", "", 0, ""
 			}
 
-			buffer = message.Params[0]
-			// TODO: Extract the nick from the prefix
-			from = message.Prefix
+			if message.Params[0] == server.Foo.Nick {
+				buffer = prefixNick
+				from = prefixNick
+			} else {
+				buffer = message.Params[0]
+				from = prefixNick
+			}
 
 		case "NOTICE":
 			line = message.Params[1]
@@ -192,9 +199,13 @@ func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string)
 				return "", "", 0, ""
 			}
 
-			buffer = message.Params[0]
-			// TODO: Extract the nick from the prefix
-			from = message.Prefix
+			if message.Params[0] == server.Foo.Nick {
+				buffer = prefixNick
+				from = prefixNick
+			} else {
+				buffer = message.Params[0]
+				from = prefixNick
+			}
 		}
 	} else if event.FromClient && event.Listener.ServerConnection != nil {
 		switch message.Command {
