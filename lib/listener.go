@@ -181,6 +181,9 @@ func (listener *Listener) RunSocketReader() {
 	listener.Manager.Bus.Dispatch(HookListenerCloseName, &HookListenerClose{
 		Listener: listener,
 	})
+	if listener.ServerConnection != nil {
+		listener.ServerConnection.RemoveListener(listener)
+	}
 }
 
 // processIncomingLine splits and handles the given command line.

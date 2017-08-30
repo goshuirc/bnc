@@ -264,6 +264,20 @@ func (sc *ServerConnection) AddListener(listener *Listener) {
 	listener.ServerConnection = sc
 }
 
+func (sc *ServerConnection) RemoveListener(listener *Listener) {
+	sc.ListenersLock.Lock()
+	newSlice := []*Listener{}
+	for _, l := range sc.Listeners {
+		if l != listener {
+			newSlice = append(newSlice, l)
+		}
+	}
+	sc.Listeners = newSlice
+	sc.ListenersLock.Unlock()
+
+	listener.ServerConnection = nil
+}
+
 func (sc *ServerConnection) ReadyToConnect() bool {
 	if sc.Nickname == "" || sc.Username == "" || sc.Realname == "" {
 		return false
