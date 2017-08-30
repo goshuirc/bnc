@@ -60,9 +60,14 @@ func loadServerCommands() {
 	ServerCommands["NICK"] = ServerCommand{
 		minParams: 1,
 		handler: func(client *Client, msg *ircmsg.IrcMessage) bool {
-			client.Lock()
-			client.Nick = msg.Params[0]
-			client.Unlock()
+			prefixNick, _, _ := SplitMask(msg.Prefix)
+
+			// If our nick just changed, update ourselves
+			if strings.ToLower(prefixNick) == strings.ToLower(client.Nick) {
+				client.Lock()
+				client.Nick = msg.Params[0]
+				client.Unlock()
+			}
 
 			return false
 		},
@@ -151,4 +156,33 @@ func getParam(msg *ircmsg.IrcMessage, idx int) string {
 	}
 
 	return msg.Params[idx]
+}
+
+func SplitMask(mask string) (string, string, string) {
+	nick := ""
+	username := ""
+	host := ""
+
+	pos := 0
+
+	pos = strings.Index(mask, "!")
+	if pos > -1 {
+		nick = mask[0:pos]
+		mask = mask[pos+1:]
+	} else {
+		nick = mask
+		mask = ""
+	}
+
+	pos = strings.Index(mask, "@")
+	if pos > -1 {
+		username = mask[0:pos]
+		mask = mask[pos+1:]
+		host = mask
+	} else {
+		username = mask
+		host = ""
+	}
+
+	return nick, username, host
 }
