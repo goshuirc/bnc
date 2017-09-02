@@ -185,6 +185,8 @@ func commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg
 	}
 
 	net.Buffers.Remove(bufferName)
+	listener.Manager.Ds.SaveConnection(net)
+
 	listener.Send(nil, "", "BOUNCER", "delbuffer", netName, bufferName, "RPL_OK")
 }
 
