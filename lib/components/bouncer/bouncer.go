@@ -297,7 +297,7 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 		net.Addresses[0].Host = netAddress
 	}
 
-	netPort, _ := strconv.Atoi(tagValue(vars, "port", "6667"))
+	netPort, _ := strconv.Atoi(tagValue(vars, "port", "0"))
 	if netPort > 0 {
 		net.Addresses[0].Port = netPort
 	}
@@ -318,7 +318,7 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 		net.Username = netUser
 	}
 
-	netTls := tagValue(vars, "tls", "0")
+	netTls := tagValue(vars, "tls", "")
 	if netTls == "1" {
 		net.Addresses[0].UseTLS = true
 	} else if netTls == "0" {
