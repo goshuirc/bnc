@@ -87,15 +87,19 @@ func loadClientCommands() {
 
 			user := listener.Manager.Users[authedUserId]
 			listener.User = user
-			network, netExists := user.Networks[networkID]
-			if netExists {
-				network.AddListener(listener)
 
-				if !network.Foo.Connected {
-					go network.Connect()
+			// An empty network ID may be a user logging in just to control his account or networks
+			if networkID != "" {
+				network, netExists := user.Networks[networkID]
+				if netExists {
+					network.AddListener(listener)
+
+					if !network.Foo.Connected {
+						go network.Connect()
+					}
+				} else {
+					log.Printf("Network %s/%s doesnt exist", userid, networkID)
 				}
-			} else {
-				log.Println("Network '" + networkID + "' doesnt exist")
 			}
 
 			listener.regLocks.Set("pass", true)
