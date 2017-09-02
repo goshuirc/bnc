@@ -51,6 +51,8 @@ func onMessage(hook interface{}) {
 		commandDisconnectNetwork(listener, params, msg)
 	case "listbuffers":
 		commandListBuffers(listener, params, msg)
+	case "delbuffer":
+		commandDelBuffer(listener, params, msg)
 	}
 }
 
@@ -164,6 +166,26 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 	}
 
 	listener.SendLine("BOUNCER listbuffers " + net.Name + " end")
+}
+
+// [c] bouncer delbuffer freenode buffername
+// [s] bouncer delbuffer freenode buffername RPL_OK
+func commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	if len(params) < 2 {
+		listener.SendLine("BOUNCER delbuffer * * ERR_INVALIDARGS")
+	}
+
+	netName := params[0]
+	bufferName := params[1]
+
+	net := getNetworkByName(listener, netName)
+	if net == nil {
+		listener.Send(nil, "", "BOUNCER", "delbuffer", netName, "*", "ERR_NETNOTFOUND")
+		return
+	}
+
+	net.Buffers.Remove(bufferName)
+	listener.Send(nil, "", "BOUNCER", "delbuffer", netName, bufferName, "RPL_OK")
 }
 
 // [c] bouncer addnetwork network=freenode;host=irc.freenode.net;port=6667;nick=prawnsalad;user=prawn
