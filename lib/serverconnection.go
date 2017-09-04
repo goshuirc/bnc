@@ -46,6 +46,7 @@ func NewServerConnection() *ServerConnection {
 		receiveLines:           make(chan *string),
 		ReceiveEvents:          make(chan Message),
 		Foo:                    ircclient.NewClient(),
+		Buffers:                make(ServerConnectionBuffers),
 	}
 
 	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.updateNickHandler)
