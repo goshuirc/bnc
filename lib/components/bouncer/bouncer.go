@@ -53,6 +53,8 @@ func onMessage(hook interface{}) {
 		commandListBuffers(listener, params, msg)
 	case "delbuffer":
 		commandDelBuffer(listener, params, msg)
+	case "delnetwork":
+		commandDelNetwork(listener, params, msg)
 	}
 }
 
@@ -188,6 +190,29 @@ func commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg
 	listener.Manager.Ds.SaveConnection(net)
 
 	listener.Send(nil, "", "BOUNCER", "delbuffer", netName, bufferName, "RPL_OK")
+}
+
+// [c] BOUNCER delnetwork freenode
+// [s] BOUNCER delnetwork * ERR_NEEDSNAME
+// [s] BOUNCER delnetwork * ERR_UNKNOWN :Error saving the network cause db failed
+// [s] BOUNCER delnetwork freenode RPL_OK
+func commandDelNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	if len(params) == 0 {
+		listener.SendLine("BOUNCER delnetwork * ERR_NEEDSNAME")
+	}
+
+	netName := params[0]
+	net := getNetworkByName(listener, netName)
+	if net == nil {
+		listener.SendLine(fmt.Sprintf("BOUNCER delnetwork %s ERR_NETNOTFOUND", netName))
+		return
+	}
+
+	net.Disconnect()
+	listener.Send(nil, "", "BOUNCER", "state", netName, "disconnected")
+
+	delete(listener.User.Networks, net.Name)
+	listener.Manager.Ds.DelConnection(net)
 }
 
 // [c] bouncer addnetwork network=freenode;host=irc.freenode.net;port=6667;nick=prawnsalad;user=prawn

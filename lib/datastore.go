@@ -11,4 +11,5 @@ type DataStoreInterface interface {
 	AuthUser(username string, password string) (authedUserId string, authSuccess bool)
 	GetUserNetworks(userId string)
 	SaveConnection(connection *ServerConnection) error
+	DelConnection(connection *ServerConnection) error
 }

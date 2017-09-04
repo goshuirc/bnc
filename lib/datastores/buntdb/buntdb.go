@@ -194,6 +194,14 @@ func (ds *DataStore) GetUserNetworks(userId string) {
 	// TODO: Return a slice of network objects of some kind
 }
 
+func (ds *DataStore) DelConnection(connection *ircbnc.ServerConnection) error {
+	ds.Db.Update(func(tx *buntdb.Tx) error {
+		tx.Delete(fmt.Sprintf(KeyServerConnectionInfo, connection.User.ID, connection.Name))
+		return nil
+	})
+	return nil
+}
+
 func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	// Store server info
 	sc := ServerConnectionMapping{
