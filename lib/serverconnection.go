@@ -20,11 +20,12 @@ type ServerConnection struct {
 	User    *User
 	Enabled bool
 
-	Nickname   string
-	FbNickname string
-	Username   string
-	Realname   string
-	Buffers    ServerConnectionBuffers
+	Nickname    string
+	FbNickname  string
+	Username    string
+	Realname    string
+	CurrentMask string
+	Buffers     ServerConnectionBuffers
 
 	receiveLines  chan *string
 	ReceiveEvents chan Message
@@ -49,6 +50,7 @@ func NewServerConnection() *ServerConnection {
 		Buffers:                make(ServerConnectionBuffers),
 	}
 
+	// Note: Foo dispatches specific commands first, and then "ALL" second.
 	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.updateNickHandler)
 	sc.Foo.HandleCommand(ircclient.RPL_WELCOME, sc.joinSavedChannels)
 	sc.Foo.HandleCommand("NICK", sc.updateNickHandler)
@@ -253,8 +255,7 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 func (sc *ServerConnection) DumpChannels(listener *Listener) {
 	for _, buffer := range sc.Buffers {
 		if buffer.Channel {
-			//TODO(dan): add channel keys and enabled/disable bool here
-			listener.Send(nil, sc.Foo.Nick, "JOIN", buffer.Name)
+			listener.Send(nil, sc.CurrentMask, "JOIN", buffer.Name)
 			sc.Foo.WriteLine("NAMES %s", buffer.Name)
 		}
 	}
@@ -355,21 +356,22 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 		return
 	}
 
-	var name, key string
-	var useKey bool
-	name = params[0]
-	if 1 < len(params) && 0 < len(params[1]) {
-		key = params[1]
-		useKey = true
+	// Only interested in our own JOINs
+	maskNick, _, _ := SplitMask(message.Prefix)
+	if maskNick != sc.Foo.Nick {
+		return
 	}
 
+	// Keep track of our mask as the server sees it
+	sc.CurrentMask = message.Prefix
+
+	name := params[0]
 	buffer := sc.Buffers.Get(name)
+
 	if buffer == nil {
 		sc.Buffers.Add(ServerConnectionBuffer{
 			Channel: true,
 			Name:    name,
-			Key:     key,
-			UseKey:  useKey,
 		})
 
 		sc.Save()
