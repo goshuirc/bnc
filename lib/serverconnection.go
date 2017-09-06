@@ -107,6 +107,10 @@ func (buffers *ServerConnectionBuffers) Remove(name string) {
 	}
 }
 
+func (buffers *ServerConnectionBuffers) Add(buffer ServerConnectionBuffer) {
+	buffers.Map()[strings.ToLower(buffer.Name)] = buffer
+}
+
 //TODO(dan): Make all these use numeric names rather than numeric numbers
 var storedConnectLines = map[string]bool{
 	ircclient.RPL_WELCOME:  true,
@@ -359,14 +363,17 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 		useKey = true
 	}
 
-	sc.Buffers[name] = ServerConnectionBuffer{
-		Channel: true,
-		Name:    name,
-		Key:     key,
-		UseKey:  useKey,
-	}
+	buffer := sc.Buffers.Get(name)
+	if buffer == nil {
+		sc.Buffers.Add(ServerConnectionBuffer{
+			Channel: true,
+			Name:    name,
+			Key:     key,
+			UseKey:  useKey,
+		})
 
-	sc.Save()
+		sc.Save()
+	}
 }
 
 func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
@@ -381,10 +388,10 @@ func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
 	isPm := strings.ToLower(params[0]) == sc.Foo.Nick
 
 	if isPm && sc.Buffers.Get(prefixNick) == nil {
-		sc.Buffers[prefixNick] = ServerConnectionBuffer{
+		sc.Buffers.Add(ServerConnectionBuffer{
 			Channel: false,
 			Name:    prefixNick,
-		}
+		})
 
 		sc.Save()
 	}
