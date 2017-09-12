@@ -94,10 +94,17 @@ func (socket *Socket) WriteLine(format string, args ...interface{}) (int, error)
 
 	line := ""
 
-	if strings.HasSuffix(format, "\n") {
-		line = fmt.Sprintf(format, args...)
+	if len(args) == 0 {
+		line = format
+		if !strings.HasSuffix(line, "\n") {
+			line += "\n"
+		}
 	} else {
-		line = fmt.Sprintf(format+"\n", args...)
+		if strings.HasSuffix(format, "\n") {
+			line = fmt.Sprintf(format, args...)
+		} else {
+			line = fmt.Sprintf(format+"\n", args...)
+		}
 	}
 
 	println("[C " + socket.Host + "] " + strings.Trim(line, "\n"))
