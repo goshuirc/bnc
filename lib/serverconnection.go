@@ -240,7 +240,7 @@ func (sc *ServerConnection) DumpRegistration(listener *Listener) {
 		listener.SendMessage(&message)
 
 		// Send any extra ISUPPORT lines after RPL_WELCOME has been sent
-		if message.Command == "RPL_WELCOME" {
+		if message.Command == ircclient.RPL_WELCOME {
 			listener.SendExtraISupports()
 		}
 	}
