@@ -60,6 +60,11 @@ func onMessage(hook interface{}) {
 func onStateSent(hook interface{}) {
 	event := hook.(*ircbnc.HookStateSent)
 
+	// BOUNCER capable clients will use CHATHISTORY when needed
+	if event.Listener.IsCapEnabled("BOUNCER") {
+		return
+	}
+
 	var store MessageDatastore
 	for _, currentStore := range stores {
 		if currentStore.SupportsRetrieve() {
