@@ -278,7 +278,7 @@ func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, 
 		return err
 	}
 
-	listener.Socket.Write(line)
+	listener.SendLine(line)
 	return nil
 }
 
