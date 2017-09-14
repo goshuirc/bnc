@@ -70,10 +70,11 @@ type ServerConnectionAddressMapping struct {
 
 // ServerConnectionBufferMapping maps ServerConnectionBuffer to its JSON structure
 type ServerConnectionBufferMapping struct {
-	Channel bool
-	Name    string
-	Key     string
-	UseKey  bool `json:"use-key"`
+	Channel  bool
+	Name     string
+	Key      string
+	UseKey   bool  `json:"use_key"`
+	LastSeen int64 `json:"last_seen"`
 }
 
 // InitDB creates the database.

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/goshuirc/bnc/lib"
 	"github.com/tidwall/buntdb"
@@ -235,9 +236,15 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
 
 	// Store server channels (Convert the string map to a slice)
-	scChannels := []*ircbnc.ServerConnectionBuffer{}
+	scChannels := []*ServerConnectionBufferMapping{}
 	for _, channel := range connection.Buffers {
-		scChannels = append(scChannels, channel)
+		scChannels = append(scChannels, &ServerConnectionBufferMapping{
+			Name:     channel.Name,
+			Channel:  channel.Channel,
+			Key:      channel.Key,
+			UseKey:   channel.UseKey,
+			LastSeen: channel.LastSeen.Unix(),
+		})
 	}
 	scChanBytes, err := json.Marshal(scChannels)
 	if err != nil {
@@ -375,10 +382,11 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 
 	for _, channel := range *scChans {
 		sc.Buffers.Add(&ircbnc.ServerConnectionBuffer{
-			Channel: channel.Channel,
-			Name:    channel.Name,
-			Key:     channel.Key,
-			UseKey:  channel.UseKey,
+			Channel:  channel.Channel,
+			Name:     channel.Name,
+			Key:      channel.Key,
+			UseKey:   channel.UseKey,
+			LastSeen: time.Unix(channel.LastSeen, 0),
 		})
 	}
 
