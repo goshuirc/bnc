@@ -96,7 +96,7 @@ func onStateSent(hook interface{}) {
 }
 
 func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
-	if !listener.IsCapEnabled("batch") {
+	if !listener.IsCapEnabled("batch") || listener.ServerConnection == nil {
 		return
 	}
 
@@ -144,7 +144,13 @@ func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
 		numMessages = 0
 	}
 
-	msgs := store.GetBeforeTime(listener.User.ID, listener.ServerConnection.Name, target, timeFrom, numMessages)
+	msgs := store.GetBeforeTime(
+		listener.User.ID,
+		listener.ServerConnection.Name,
+		target,
+		timeFrom,
+		numMessages,
+	)
 
 	batchId := makeBatchId()
 	listener.Send(nil, "", "BATCH", "+"+batchId, "chathistory", target)

@@ -74,16 +74,17 @@ type ServerConnectionAddress struct {
 type ServerConnectionAddresses []ServerConnectionAddress
 
 type ServerConnectionBuffer struct {
-	Channel bool
-	Name    string
-	Key     string
-	UseKey  bool
+	Channel  bool
+	Name     string
+	Key      string
+	UseKey   bool
+	LastSeen time.Time
 }
 
-type ServerConnectionBuffers map[string]ServerConnectionBuffer
+type ServerConnectionBuffers map[string]*ServerConnectionBuffer
 
-func (buffers *ServerConnectionBuffers) Map() map[string]ServerConnectionBuffer {
-	return map[string]ServerConnectionBuffer(*buffers)
+func (buffers *ServerConnectionBuffers) Map() map[string]*ServerConnectionBuffer {
+	return map[string]*ServerConnectionBuffer(*buffers)
 }
 
 func (buffers *ServerConnectionBuffers) Get(findName string) *ServerConnectionBuffer {
@@ -91,7 +92,7 @@ func (buffers *ServerConnectionBuffers) Get(findName string) *ServerConnectionBu
 
 	for _, buffer := range buffers.Map() {
 		if strings.ToLower(buffer.Name) == findName {
-			return &buffer
+			return buffer
 		}
 	}
 
@@ -109,7 +110,7 @@ func (buffers *ServerConnectionBuffers) Remove(name string) {
 	}
 }
 
-func (buffers *ServerConnectionBuffers) Add(buffer ServerConnectionBuffer) {
+func (buffers *ServerConnectionBuffers) Add(buffer *ServerConnectionBuffer) {
 	buffers.Map()[strings.ToLower(buffer.Name)] = buffer
 }
 
@@ -369,7 +370,7 @@ func (sc *ServerConnection) handleJoin(message *ircmsg.IrcMessage) {
 	buffer := sc.Buffers.Get(name)
 
 	if buffer == nil {
-		sc.Buffers.Add(ServerConnectionBuffer{
+		sc.Buffers.Add(&ServerConnectionBuffer{
 			Channel: true,
 			Name:    name,
 		})
@@ -390,7 +391,7 @@ func (sc *ServerConnection) maybeCreateQueryBuffer(message *ircmsg.IrcMessage) {
 	isPm := strings.ToLower(params[0]) == sc.Foo.Nick
 
 	if isPm && sc.Buffers.Get(prefixNick) == nil {
-		sc.Buffers.Add(ServerConnectionBuffer{
+		sc.Buffers.Add(&ServerConnectionBuffer{
 			Channel: false,
 			Name:    prefixNick,
 		})

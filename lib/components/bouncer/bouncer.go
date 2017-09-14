@@ -2,8 +2,10 @@ package bncComponentBouncer
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/irc-go/ircmsg"
@@ -11,13 +13,7 @@ import (
 
 func Run(manager *ircbnc.Manager) {
 	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
-	manager.Bus.Register(ircbnc.HookNewListenerName, onNewListener)
-	ircbnc.Capabilities.Supported["BOUNCER"] = ""
-}
-
-func onNewListener(hook interface{}) {
-	event := hook.(*ircbnc.HookNewListener)
-	event.Listener.ExtraISupports["BOUNCER"] = "1"
+	ircbnc.Capabilities.Supported["bouncer"] = ""
 }
 
 func onMessage(hook interface{}) {
@@ -52,6 +48,8 @@ func onMessage(hook interface{}) {
 		commandDisconnectNetwork(listener, params, msg)
 	case "listbuffers":
 		commandListBuffers(listener, params, msg)
+	case "changebuffer":
+		commandChangeBuffer(listener, params, msg)
 	case "delbuffer":
 		commandDelBuffer(listener, params, msg)
 	case "delnetwork":
@@ -150,15 +148,19 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 		return
 	}
 
-	// TODO: Also list any open query buffers we have
-	for _, channel := range net.Buffers {
+	for _, buffer := range net.Buffers {
 		vals := make(map[string]string)
 		vals["network"] = net.Name
-		vals["buffer"] = channel.Name
-		vals["channel"] = "1"
-		// TODO: Store the topic in the channels when we have them
-		vals["topic"] = ""
-		vals["joined"] = "1"
+		vals["buffer"] = buffer.Name
+		println("Sending seen as", buffer.Name, buffer.LastSeen.Format(time.RFC3339))
+		vals["seen"] = buffer.LastSeen.Format(time.RFC3339)
+
+		if buffer.Channel {
+			vals["channel"] = "1"
+			// TODO: Store the topic in the channels when we have them
+			vals["topic"] = ""
+			vals["joined"] = "1"
+		}
 
 		line := ""
 		for k, v := range vals {
@@ -355,6 +357,60 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 		listener.SendLine("BOUNCER changenetwork " + net.Name + " ERR_UNKNOWN :Error saving the network")
 	} else {
 		listener.SendLine("BOUNCER changenetwork " + net.Name + " RPL_OK")
+	}
+}
+
+// [c] bouncer changebuffer freenode buffername seen=;
+// [s] bouncer changebuffer freenode buffername RPL_OK
+func commandChangeBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	if len(params) < 3 {
+		listener.SendLine("BOUNCER changebuffer * * ERR_INVALIDARGS")
+		return
+	}
+
+	vars, tagsErr := ircmsg.ParseTags(params[2])
+	if tagsErr != nil {
+		listener.SendLine("BOUNCER changebuffer * * ERR_INVALIDARGS")
+		return
+	}
+
+	netName := params[0]
+	net := getNetworkByName(listener, netName)
+	if net == nil {
+		listener.SendLine("BOUNCER changebuffer * * ERR_NETNOTFOUND")
+		return
+	}
+
+	bufferName := params[1]
+	buffer := net.Buffers.Get(bufferName)
+	if buffer == nil {
+		listener.SendLine("BOUNCER changebuffer * * ERR_BUFFERNOTFOUND")
+		return
+	}
+
+	seen := tagValue(vars, "seen", "")
+	if seen != "" {
+		seenTime, seenErr := time.Parse(time.RFC3339, seen)
+		if seenErr != nil {
+			log.Println("Error parsing time for seen in BOUNCER: " + seenErr.Error())
+		} else {
+			buffer.LastSeen = seenTime.UTC()
+		}
+	}
+
+	saveErr := listener.Manager.Ds.SaveConnection(net)
+	if saveErr != nil {
+		listener.SendLine(fmt.Sprintf(
+			"BOUNCER changebuffer %s %s ERR_UNKNOWN :Error saving the buffer",
+			net.Name,
+			buffer.Name,
+		))
+	} else {
+		listener.SendLine(fmt.Sprintf(
+			"BOUNCER changebuffer %s %s RPL_OK",
+			net.Name,
+			buffer.Name,
+		))
 	}
 }
 

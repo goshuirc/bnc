@@ -235,7 +235,7 @@ func (ds *DataStore) SaveConnection(connection *ircbnc.ServerConnection) error {
 	saString := string(saBytes) //TODO(dan): Should we do this in a safer way?
 
 	// Store server channels (Convert the string map to a slice)
-	scChannels := []ircbnc.ServerConnectionBuffer{}
+	scChannels := []*ircbnc.ServerConnectionBuffer{}
 	for _, channel := range connection.Buffers {
 		scChannels = append(scChannels, channel)
 	}
@@ -373,15 +373,13 @@ func loadServerConnection(name string, user *ircbnc.User, tx *buntdb.Tx) (*ircbn
 		return nil, fmt.Errorf("Could not create new ServerConnection (unmarshalling sc channels): %s", err.Error())
 	}
 
-	sc.Buffers = make(map[string]ircbnc.ServerConnectionBuffer)
 	for _, channel := range *scChans {
-		sc.Buffers[channel.Name] = ircbnc.ServerConnectionBuffer{
+		sc.Buffers.Add(&ircbnc.ServerConnectionBuffer{
 			Channel: channel.Channel,
 			Name:    channel.Name,
 			Key:     channel.Key,
 			UseKey:  channel.UseKey,
-		}
-
+		})
 	}
 
 	// load addresses
