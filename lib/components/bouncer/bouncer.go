@@ -152,7 +152,6 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 		vals := make(map[string]string)
 		vals["network"] = net.Name
 		vals["buffer"] = buffer.Name
-		println("Sending seen as", buffer.Name, buffer.LastSeen.Format(time.RFC3339))
 		vals["seen"] = buffer.LastSeen.Format(time.RFC3339)
 
 		if buffer.Channel {
