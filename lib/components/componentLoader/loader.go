@@ -1,3 +1,6 @@
+// Copyright (c) 2017 Darren Whitlen <darren@kiwiirc.com>
+// released under the MIT license
+
 package bncComponentLoader
 
 import (
