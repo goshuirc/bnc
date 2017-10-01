@@ -43,7 +43,7 @@ Options:
 
 	data, dataType := getDataStoreInstance(config)
 	if data == nil {
-		log.Fatal("No valid storage engines have been confugured")
+		log.Fatal("No valid storage engines have been configured")
 	} else {
 		log.Println("Using storage " + dataType)
 	}
