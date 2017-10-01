@@ -91,6 +91,8 @@ _testmain.go
 
 
 ### GoshuBNC ###
+/bncdata.*
+/chatlogs
 /bnc.*
 !/bnc.go
 /tls.*
