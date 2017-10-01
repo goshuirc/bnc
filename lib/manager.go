@@ -90,7 +90,7 @@ func (m *Manager) Run() error {
 		if listenTLS {
 			tlsConfig, err := config.Config()
 			if err != nil {
-				log.Fatal(address, "tls listen error: ", err)
+				log.Fatal(fmt.Sprintf("TLS listen error on `%s`: %s", address, err.Error()))
 			}
 			listener = tls.NewListener(listener, tlsConfig)
 			tlsString = "TLS"
