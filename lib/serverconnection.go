@@ -83,6 +83,7 @@ type ServerConnectionBuffer struct {
 
 type ServerConnectionBuffers map[string]*ServerConnectionBuffer
 
+//TODO(dan): Why do we use this function instead of just having ServerConnectionBuffers be a struct with a hidden map?
 func (buffers *ServerConnectionBuffers) Map() map[string]*ServerConnectionBuffer {
 	return map[string]*ServerConnectionBuffer(*buffers)
 }

@@ -317,7 +317,8 @@ func InitialSetup(manager *ircbnc.Manager) {
 			log.Fatal(err.Error())
 		}
 
-		var serverChannels ircbnc.ServerConnectionBuffers
+		//TODO(dan): this should be NewServerConnectionBuffers()
+		serverChannels := make(ircbnc.ServerConnectionBuffers)
 		for {
 			serverChannelsString, err := Query("Channels to autojoin (separated by spaces): ")
 			if err != nil {
