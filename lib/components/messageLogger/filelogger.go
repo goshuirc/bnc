@@ -120,7 +120,7 @@ func createLineFromMessage(event *ircbnc.HookIrcRaw) (string, string) {
 	}
 
 	if line != "" {
-		line = fmt.Sprintf("[%s] %s", time.Now(), line)
+		line = fmt.Sprintf("[%s] %s", time.Now().Format("2006-01-02 15:04:05"), line)
 	}
 	return line, destination
 }
