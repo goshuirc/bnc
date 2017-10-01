@@ -19,35 +19,37 @@ import (
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
+// RegistrationLocks ensure the user can't complete registration until they've finished the reg process.
 type RegistrationLocks struct {
-	Lock sync.Mutex
+	sync.Mutex
 	Cap  bool
 	Nick bool
 	User bool
 	Pass bool
 }
 
-func (locks *RegistrationLocks) Set(lockName string, val bool) {
-	locks.Lock.Lock()
+// Set sets the given registration lock.
+func (rl *RegistrationLocks) Set(lockName string, val bool) {
+	rl.Lock()
+	defer rl.Unlock()
 
 	switch lockName {
 	case "cap":
-		locks.Cap = val
+		rl.Cap = val
 	case "nick":
-		locks.Nick = val
+		rl.Nick = val
 	case "user":
-		locks.User = val
+		rl.User = val
 	case "pass":
-		locks.Pass = val
+		rl.Pass = val
 	}
-
-	locks.Lock.Unlock()
 }
 
-func (locks *RegistrationLocks) Completed() bool {
-	locks.Lock.Lock()
-	completed := locks.Cap && locks.Pass && locks.Nick && locks.User
-	locks.Lock.Unlock()
+// Completed returns true if all of our registration locks have been completed.
+func (rl *RegistrationLocks) Completed() bool {
+	rl.Lock()
+	completed := rl.Cap && rl.Pass && rl.Nick && rl.User
+	rl.Unlock()
 	return completed
 }
 
@@ -246,12 +248,12 @@ func (listener *Listener) processIncomingLine(line string) {
 	// return true
 }
 
-// SendMessage sends an IrcMessage to the listener
+// SendMessage sends an IrcMessage to the user
 func (listener *Listener) SendMessage(msg *ircmsg.IrcMessage) error {
 	return listener.Send(&msg.Tags, msg.Prefix, msg.Command, msg.Params...)
 }
 
-// Send sends an IRC line to the listener.
+// Send sends an IRC line to the user.
 func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, command string, params ...string) error {
 	var message ircmsg.IrcMessage
 	if listener.TagsEnabled {
@@ -282,11 +284,12 @@ func (listener *Listener) Send(tags *map[string]ircmsg.TagValue, prefix string, 
 	return nil
 }
 
-// SendLine sends a raw string line to the listener
+// SendLine sends a raw string line to the user.
 func (listener *Listener) SendLine(line string) {
 	listener.Socket.WriteLine(line)
 }
 
+// SendStatus sends a status PRIVMSG to the user.
 func (listener *Listener) SendStatus(line string) {
 	listener.Send(nil, listener.Manager.StatusSource, "PRIVMSG", listener.ClientNick, line)
 }
