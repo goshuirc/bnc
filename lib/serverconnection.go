@@ -27,8 +27,7 @@ type ServerConnection struct {
 	CurrentMask string
 	Buffers     ServerConnectionBuffers
 
-	receiveLines  chan *string
-	ReceiveEvents chan Message
+	receiveLines chan *string
 
 	storingConnectMessages bool
 	connectMessages        []ircmsg.IrcMessage
@@ -45,7 +44,6 @@ func NewServerConnection() *ServerConnection {
 	sc := &ServerConnection{
 		storingConnectMessages: true,
 		receiveLines:           make(chan *string),
-		ReceiveEvents:          make(chan Message),
 		Foo:                    ircclient.NewClient(),
 		Buffers:                make(ServerConnectionBuffers),
 	}
