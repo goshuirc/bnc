@@ -3,11 +3,52 @@ package bncComponentControl
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/goshuirc/bnc/lib"
 	"github.com/goshuirc/irc-go/ircmsg"
+)
+
+// Command holds the handlers and other info for a given command.
+type Command struct {
+	Handler     func(*ircbnc.Listener, []string, ircmsg.IrcMessage)
+	OperOnly    bool
+	Usage       string
+	Description string
+}
+
+var (
+	// Commands holds info for all of our valid commands.
+	Commands = map[string]Command{
+		"addnetwork": {
+			Handler:     commandAddNetwork,
+			Usage:       "addnetwork <name> <address> [[+]port] [password]",
+			Description: "Add the given network, [+]port means use TLS and [password] is the connection password",
+		},
+		"adduser": {
+			Handler:     commandAddUser,
+			OperOnly:    true,
+			Usage:       "adduser <username> <password>",
+			Description: "Creates the given user with the given password",
+		},
+		"connect": {
+			Handler:     commandConnectNetwork,
+			Usage:       "connect [network]",
+			Description: "Connect to this (or the given) network",
+		},
+		"disconnect": {
+			Handler:     commandDisconnectNetwork,
+			Usage:       "disconnect [network]",
+			Description: "Disconnect from this (or the given) network",
+		},
+		"listnetworks": {
+			Handler:     commandListNetworks,
+			Usage:       "listnetworks",
+			Description: "Lists all of your networks",
+		},
+	}
 )
 
 // Nick of the controller
@@ -37,28 +78,59 @@ func onMessage(hook interface{}) {
 	event.Halt = true
 
 	parts := strings.Split(msg.Params[1], " ")
-	command := strings.ToLower(parts[0])
+	commandName := strings.ToLower(parts[0])
 	params := parts[1:]
 
-	switch command {
-	case "listnetworks":
-		commandListNetworks(listener, params, msg)
-	case "addnetwork":
-		commandAddNetwork(listener, params, msg)
-	case "connect":
-		commandConnectNetwork(listener, params, msg)
-	case "disconnect":
-		commandDisconnectNetwork(listener, params, msg)
+	// dispatch help separately so go doesn't get into a weird loop
+	if commandName == "help" {
+		commandHelp(listener, params, msg)
+		return
 	}
 
-	// Admin commands
-	// TODO: The role apaprently isnt set or saved. do that.
-	if listener.User.Role == "Owner" {
-		switch command {
-		case "adduser":
-			commandAddUser(listener, params, msg)
-		}
+	// dispatch regular commands
+	command, exists := Commands[commandName]
+	if !exists {
+		listener.SendStatus("I don't know that command, send `help` for a list of supported commands")
+		return
 	}
+
+	// silently ignore if command's oper-only
+	// TODO: The role apaprently isnt set or saved. do that.
+	if command.OperOnly && listener.User.Role != "Owner" {
+		return
+	}
+
+	command.Handler(listener, params, msg)
+}
+
+func commandHelp(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	//TODO(dan): cache this
+	table := NewTable()
+	table.SetHeader([]string{"Usage", "Description"})
+
+	sortedCommandNames := sort.StringSlice{"help"}
+	for name := range Commands {
+		sortedCommandNames = append(sortedCommandNames, name)
+	}
+	sort.Sort(sortedCommandNames)
+
+	for _, name := range sortedCommandNames {
+		// add help specially
+		if name == "help" {
+			table.Append([]string{"help", "Provides list of commands and their descriptions"})
+			continue
+		}
+
+		// add normal command
+		command := Commands[name]
+		// ignore oper-only commands if not an oper
+		if command.OperOnly && listener.User.Role != "Owner" {
+			continue
+		}
+		table.Append([]string{command.Usage, command.Description})
+	}
+
+	table.RenderToListener(listener, control_source, "PRIVMSG")
 }
 
 func commandAddUser(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
