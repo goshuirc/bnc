@@ -38,7 +38,7 @@ type Config struct {
 		Storage      map[string]string
 		Listeners    []string
 		TLSListeners map[string]*TLSListenConfig `yaml:"tls-listeners"`
-		Logging      map[string]map[string]string
+		Logging      map[string]string
 	}
 }
 
