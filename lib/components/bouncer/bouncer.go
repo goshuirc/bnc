@@ -12,11 +12,23 @@ import (
 )
 
 func Run(manager *ircbnc.Manager) {
-	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
 	ircbnc.Capabilities.Supported["bouncer"] = ""
+
+	b := &Bouncer{
+		Manager: manager,
+	}
+	b.RegisterHooks()
 }
 
-func onMessage(hook interface{}) {
+type Bouncer struct {
+	Manager *ircbnc.Manager
+}
+
+func (bouncer *Bouncer) RegisterHooks() {
+	bouncer.Manager.Bus.Register(ircbnc.HookIrcRawName, bouncer.onMessage)
+}
+
+func (bouncer *Bouncer) onMessage(hook interface{}) {
 	event := hook.(*ircbnc.HookIrcRaw)
 	if !event.FromClient {
 		return
@@ -37,27 +49,29 @@ func onMessage(hook interface{}) {
 
 	switch command {
 	case "listnetworks":
-		commandListNetworks(listener, params, msg)
+		bouncer.commandListNetworks(listener, params, msg)
 	case "addnetwork":
-		commandAddNetwork(listener, params, msg)
+		bouncer.commandAddNetwork(listener, params, msg)
 	case "changenetwork":
-		commandChangeNetwork(listener, params, msg)
+		bouncer.commandChangeNetwork(listener, params, msg)
 	case "connect":
-		commandConnectNetwork(listener, params, msg)
+		bouncer.commandConnectNetwork(listener, params, msg)
 	case "disconnect":
-		commandDisconnectNetwork(listener, params, msg)
+		bouncer.commandDisconnectNetwork(listener, params, msg)
 	case "listbuffers":
-		commandListBuffers(listener, params, msg)
+		bouncer.commandListBuffers(listener, params, msg)
+	case "playbackbuffers":
+		bouncer.commandPlaybackBuffers(listener, params, msg)
 	case "changebuffer":
-		commandChangeBuffer(listener, params, msg)
+		bouncer.commandChangeBuffer(listener, params, msg)
 	case "delbuffer":
-		commandDelBuffer(listener, params, msg)
+		bouncer.commandDelBuffer(listener, params, msg)
 	case "delnetwork":
-		commandDelNetwork(listener, params, msg)
+		bouncer.commandDelNetwork(listener, params, msg)
 	}
 }
 
-func commandConnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandConnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
 		listener.SendLine("BOUNCER connect * ERR_INVALIDARGS")
 	}
@@ -79,7 +93,7 @@ func commandConnectNetwork(listener *ircbnc.Listener, params []string, message i
 	}
 }
 
-func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandDisconnectNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
 		listener.SendLine("BOUNCER disconnect * ERR_INVALIDARGS")
 	}
@@ -99,7 +113,7 @@ func commandDisconnectNetwork(listener *ircbnc.Listener, params []string, messag
 // [s] bouncer listnetworks network=freenode;host=irc.freenode.net;port=6667;state=disconnected;
 // [s] bouncer listnetworks network=snoonet;host=irc.snoonet.org;port=6697;state=connected;tls=1
 // [s] bouncer listnetworks end
-func commandListNetworks(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandListNetworks(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	for _, network := range listener.User.Networks {
 		vals := make(map[string]string)
 		vals["network"] = network.Name
@@ -132,11 +146,43 @@ func commandListNetworks(listener *ircbnc.Listener, params []string, message irc
 	listener.SendLine("BOUNCER listnetworks end")
 }
 
+// [c] bouncer playbackbuffers <network name>
+func (bouncer *Bouncer) commandPlaybackBuffers(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+	if len(params) < 1 {
+		listener.SendLine("BOUNCER playbackbuffers * ERR_INVALIDARGS")
+		return
+	}
+
+	netName := params[0]
+	net := getNetworkByName(listener, netName)
+	if net == nil {
+		listener.SendLine("BOUNCER playbackbuffers " + netName + " ERR_NETNOTFOUND")
+		return
+	}
+
+	store := bouncer.Manager.Messages
+	if store == nil || !store.SupportsRetrieve() {
+		return
+	}
+
+	for _, buffer := range net.Buffers {
+		msgs := store.GetBeforeTime(listener.User.ID, net.Name, buffer.Name, time.Now(), 50)
+		for _, message := range msgs {
+			line, err := message.Line()
+			if err != nil {
+				log.Println("Error building message from storage:", err.Error())
+				continue
+			}
+			listener.SendLine(line)
+		}
+	}
+}
+
 // [c] bouncer listbuffers <network name>
 // [s] bouncer listbuffers freenode network=freenode;buffer=#chan;joined=1;topic=some\stopic
 // [s] bouncer listbuffers freenode network=freenode;buffer=somenick;
 // [s] bouncer listbuffers freenode end
-func commandListBuffers(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandListBuffers(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
 		listener.SendLine("BOUNCER listbuffers * ERR_INVALIDARGS")
 	}
@@ -174,7 +220,7 @@ func commandListBuffers(listener *ircbnc.Listener, params []string, message ircm
 
 // [c] bouncer delbuffer freenode buffername
 // [s] bouncer delbuffer freenode buffername RPL_OK
-func commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 2 {
 		listener.SendLine("BOUNCER delbuffer * * ERR_INVALIDARGS")
 	}
@@ -198,7 +244,7 @@ func commandDelBuffer(listener *ircbnc.Listener, params []string, message ircmsg
 // [s] BOUNCER delnetwork * ERR_NEEDSNAME
 // [s] BOUNCER delnetwork * ERR_UNKNOWN :Error saving the network cause db failed
 // [s] BOUNCER delnetwork freenode RPL_OK
-func commandDelNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandDelNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) == 0 {
 		listener.SendLine("BOUNCER delnetwork * ERR_NEEDSNAME")
 	}
@@ -221,7 +267,7 @@ func commandDelNetwork(listener *ircbnc.Listener, params []string, message ircms
 // [s] bouncer addnetwork ERR_NAMEINUSE freenode
 // [s] bouncer addnetwork ERR_NEEDSNAME *
 // [s] bouncer addnetwork RPL_OK freenode
-func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandAddNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 1 {
 		listener.SendLine("BOUNCER addnetwork * ERR_INVALIDARGS")
 		return
@@ -300,7 +346,7 @@ func commandAddNetwork(listener *ircbnc.Listener, params []string, message ircms
 
 // [c] bouncer changenetwork freenode host=irc.freenode.net;port=6667;
 // [s] bouncer changenetwork RPL_OK freenode
-func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandChangeNetwork(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 2 {
 		listener.SendLine("BOUNCER changenetwork * ERR_INVALIDARGS")
 		return
@@ -361,7 +407,7 @@ func commandChangeNetwork(listener *ircbnc.Listener, params []string, message ir
 
 // [c] bouncer changebuffer freenode buffername seen=;
 // [s] bouncer changebuffer freenode buffername RPL_OK
-func commandChangeBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
+func (bouncer *Bouncer) commandChangeBuffer(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
 	if len(params) < 3 {
 		listener.SendLine("BOUNCER changebuffer * * ERR_INVALIDARGS")
 		return
