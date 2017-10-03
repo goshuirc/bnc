@@ -12,34 +12,57 @@ import (
 	"github.com/goshuirc/irc-go/ircmsg"
 )
 
-var stores []MessageDatastore
-
 const MaxRetrieveSize int = 50
 
 func Run(manager *ircbnc.Manager) {
-	for logType, logConf := range manager.Config.Bouncer.Logging {
-		if logType == "file" {
-			log.Println("Starting message logger: " + logType)
-			store := NewFileMessageDatastore(logConf)
-			stores = append(stores, &store)
-		} else if logType == "sqlite" {
-			log.Println("Starting message logger: " + logType)
-			store := NewSqliteMessageDatastore(logConf)
-			stores = append(stores, &store)
-		}
+	store, _ := getMessageDataStoreInstance(manager.Config)
+	if store == nil {
+		return
 	}
 
-	manager.Bus.Register(ircbnc.HookIrcRawName, onMessage)
-	manager.Bus.Register(ircbnc.HookStateSentName, onStateSent)
-	manager.Bus.Register(ircbnc.HookNewListenerName, onNewListener)
+	manager.Messages = store
+	l := &Logger{
+		Manager: manager,
+	}
+	l.RegisterHooks()
 }
 
-func onNewListener(hook interface{}) {
+func getMessageDataStoreInstance(config *ircbnc.Config) (ircbnc.MessageDatastore, string) {
+	loggingConfig := config.Bouncer.Logging
+	storageType, _ := loggingConfig["type"]
+
+	var store ircbnc.MessageDatastore
+
+	if storageType == "file" {
+		store = NewFileMessageDatastore(loggingConfig)
+	} else if storageType == "sqlite" {
+		store = NewSqliteMessageDatastore(loggingConfig)
+	} else {
+		// No recognised storage type. Blank it off
+		storageType = ""
+	}
+
+	return store, storageType
+}
+
+type Logger struct {
+	Manager *ircbnc.Manager
+}
+
+func (logger *Logger) RegisterHooks() {
+	logger.Manager.Bus.Register(ircbnc.HookIrcRawName, logger.onMessage)
+	logger.Manager.Bus.Register(ircbnc.HookStateSentName, logger.onStateSent)
+	logger.Manager.Bus.Register(ircbnc.HookNewListenerName, logger.onNewListener)
+}
+
+func (logger *Logger) onNewListener(hook interface{}) {
 	event := hook.(*ircbnc.HookNewListener)
-	event.Listener.ExtraISupports["CHATHISTORY"] = strconv.Itoa(MaxRetrieveSize)
+	if logger.Manager.Messages.SupportsRetrieve() {
+		event.Listener.ExtraISupports["CHATHISTORY"] = strconv.Itoa(MaxRetrieveSize)
+	}
 }
 
-func onMessage(hook interface{}) {
+func (logger *Logger) onMessage(hook interface{}) {
 	event := hook.(*ircbnc.HookIrcRaw)
 
 	// Only deal with messages from logged in users
@@ -47,17 +70,16 @@ func onMessage(hook interface{}) {
 		return
 	}
 
-	for _, store := range stores {
-		store.Store(event)
-	}
+	logger.Manager.Messages.Store(event)
 
 	if event.Message.Command == "CHATHISTORY" {
 		event.Halt = true
-		handleChatHistory(event.Listener, &event.Message)
+		logger.handleChatHistory(event.Listener, &event.Message)
 	}
 }
 
-func onStateSent(hook interface{}) {
+// Send playback after a client has had its state sent
+func (logger *Logger) onStateSent(hook interface{}) {
 	event := hook.(*ircbnc.HookStateSent)
 
 	// BOUNCER capable clients will use CHATHISTORY when needed
@@ -65,15 +87,8 @@ func onStateSent(hook interface{}) {
 		return
 	}
 
-	var store MessageDatastore
-	for _, currentStore := range stores {
-		if currentStore.SupportsRetrieve() {
-			store = currentStore
-			break
-		}
-	}
-
-	if store == nil {
+	store := logger.Manager.Messages
+	if !store.SupportsRetrieve() {
 		return
 	}
 
@@ -95,7 +110,7 @@ func onStateSent(hook interface{}) {
 	}
 }
 
-func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
+func (logger *Logger) handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
 	if !listener.IsCapEnabled("batch") || listener.ServerConnection == nil {
 		return
 	}
@@ -104,12 +119,9 @@ func handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.IrcMessage) {
 		return
 	}
 
-	var store MessageDatastore
-	for _, s := range stores {
-		if s.SupportsRetrieve() {
-			store = s
-			break
-		}
+	store := logger.Manager.Messages
+	if !store.SupportsRetrieve() {
+		return
 	}
 
 	target := msg.Params[0]

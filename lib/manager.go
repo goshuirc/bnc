@@ -25,8 +25,9 @@ var (
 
 // Manager handles the different components that keep GoshuBNC spinning.
 type Manager struct {
-	Config *Config
-	Ds     DataStoreInterface
+	Config   *Config
+	Ds       DataStoreInterface
+	Messages MessageDatastore
 
 	Users     map[string]*User
 	Listeners []net.Listener

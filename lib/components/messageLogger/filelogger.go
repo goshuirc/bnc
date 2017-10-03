@@ -15,8 +15,8 @@ type FileMessageDatastore struct {
 	logPath string
 }
 
-func NewFileMessageDatastore(config map[string]string) FileMessageDatastore {
-	ds := FileMessageDatastore{}
+func NewFileMessageDatastore(config map[string]string) *FileMessageDatastore {
+	ds := &FileMessageDatastore{}
 
 	ds.logPath = config["path"]
 	if !strings.HasSuffix(ds.logPath, "/") {
@@ -26,17 +26,17 @@ func NewFileMessageDatastore(config map[string]string) FileMessageDatastore {
 	return ds
 }
 
-func (ds FileMessageDatastore) SupportsStore() bool {
+func (ds *FileMessageDatastore) SupportsStore() bool {
 	return true
 }
-func (ds FileMessageDatastore) SupportsRetrieve() bool {
+func (ds *FileMessageDatastore) SupportsRetrieve() bool {
 	return false
 }
-func (ds FileMessageDatastore) SupportsSearch() bool {
+func (ds *FileMessageDatastore) SupportsSearch() bool {
 	return false
 }
 
-func (ds FileMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
+func (ds *FileMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 	if ds.logPath == "" {
 		return
 	}
@@ -60,13 +60,13 @@ func (ds FileMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 	f.WriteString(line + "\n")
 	f.Close()
 }
-func (ds FileMessageDatastore) GetFromTime(string, string, string, time.Time, int) []*ircmsg.IrcMessage {
+func (ds *FileMessageDatastore) GetFromTime(string, string, string, time.Time, int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
 }
-func (ds FileMessageDatastore) GetBeforeTime(string, string, string, time.Time, int) []*ircmsg.IrcMessage {
+func (ds *FileMessageDatastore) GetBeforeTime(string, string, string, time.Time, int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
 }
-func (ds FileMessageDatastore) Search(string, string, string, time.Time, time.Time, int) []*ircmsg.IrcMessage {
+func (ds *FileMessageDatastore) Search(string, string, string, time.Time, time.Time, int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
 }
 

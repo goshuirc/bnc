@@ -41,8 +41,8 @@ func (ds *SqliteMessageDatastore) SupportsRetrieve() bool {
 func (ds *SqliteMessageDatastore) SupportsSearch() bool {
 	return false
 }
-func NewSqliteMessageDatastore(config map[string]string) SqliteMessageDatastore {
-	ds := SqliteMessageDatastore{}
+func NewSqliteMessageDatastore(config map[string]string) *SqliteMessageDatastore {
+	ds := &SqliteMessageDatastore{}
 
 	ds.dbPath = config["database"]
 	db, err := sql.Open("sqlite3", ds.dbPath)
@@ -65,7 +65,7 @@ func NewSqliteMessageDatastore(config map[string]string) SqliteMessageDatastore 
 	return ds
 }
 
-func (ds SqliteMessageDatastore) messageWriter() {
+func (ds *SqliteMessageDatastore) messageWriter() {
 	storeStmt, err := ds.db.Prepare("INSERT INTO messages (uid, netid, ts, buffer, fromNick, type, line) VALUES (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Fatal(err.Error())
@@ -88,7 +88,7 @@ func (ds SqliteMessageDatastore) messageWriter() {
 	}
 }
 
-func (ds SqliteMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
+func (ds *SqliteMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 	from, buffer, messageType, line := extractMessageParts(event)
 	if line == "" {
 		return
@@ -104,10 +104,10 @@ func (ds SqliteMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 		line:        line,
 	}
 }
-func (ds SqliteMessageDatastore) GetFromTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
+func (ds *SqliteMessageDatastore) GetFromTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
 }
-func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
+func (ds *SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
 	messages := []*ircmsg.IrcMessage{}
 
 	sql := "SELECT ts, fromNick, type, line FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts < ? ORDER BY ts DESC LIMIT ?"
@@ -155,7 +155,7 @@ func (ds SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, 
 	// TODO: Private messages should be stored with the buffer name as the other user.
 	return messages
 }
-func (ds SqliteMessageDatastore) Search(string, string, string, time.Time, time.Time, int) []*ircmsg.IrcMessage {
+func (ds *SqliteMessageDatastore) Search(string, string, string, time.Time, time.Time, int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
 }
 
