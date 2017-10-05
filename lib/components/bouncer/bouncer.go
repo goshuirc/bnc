@@ -60,8 +60,6 @@ func (bouncer *Bouncer) onMessage(hook interface{}) {
 		bouncer.commandDisconnectNetwork(listener, params, msg)
 	case "listbuffers":
 		bouncer.commandListBuffers(listener, params, msg)
-	case "playbackbuffers":
-		bouncer.commandPlaybackBuffers(listener, params, msg)
 	case "changebuffer":
 		bouncer.commandChangeBuffer(listener, params, msg)
 	case "delbuffer":
@@ -144,38 +142,6 @@ func (bouncer *Bouncer) commandListNetworks(listener *ircbnc.Listener, params []
 	}
 
 	listener.SendLine("BOUNCER listnetworks end")
-}
-
-// [c] bouncer playbackbuffers <network name>
-func (bouncer *Bouncer) commandPlaybackBuffers(listener *ircbnc.Listener, params []string, message ircmsg.IrcMessage) {
-	if len(params) < 1 {
-		listener.SendLine("BOUNCER playbackbuffers * ERR_INVALIDARGS")
-		return
-	}
-
-	netName := params[0]
-	net := getNetworkByName(listener, netName)
-	if net == nil {
-		listener.SendLine("BOUNCER playbackbuffers " + netName + " ERR_NETNOTFOUND")
-		return
-	}
-
-	store := bouncer.Manager.Messages
-	if store == nil || !store.SupportsRetrieve() {
-		return
-	}
-
-	for _, buffer := range net.Buffers {
-		msgs := store.GetBeforeTime(listener.User.ID, net.Name, buffer.Name, time.Now(), 50)
-		for _, message := range msgs {
-			line, err := message.Line()
-			if err != nil {
-				log.Println("Error building message from storage:", err.Error())
-				continue
-			}
-			listener.SendLine(line)
-		}
-	}
 }
 
 // [c] bouncer listbuffers <network name>
