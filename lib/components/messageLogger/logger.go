@@ -133,6 +133,8 @@ func (logger *Logger) handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.I
 		return
 	}
 	if startParts[0] != "timestamp" {
+		log.Println("Unsupported starting point for CHATHISTORY: " + startParts[0])
+		return
 	}
 
 	timeFrom, timeErr := time.Parse(time.RFC3339, startParts[1])
@@ -146,38 +148,58 @@ func (logger *Logger) handleChatHistory(listener *ircbnc.Listener, msg *ircmsg.I
 		return
 	}
 	if endParts[0] != "message_count" {
+		log.Println("Only message_count ending point is supported for CHATHISTORY")
+		return
 	}
 
 	numMessages, _ := strconv.Atoi(endParts[1])
 	if numMessages > MaxRetrieveSize {
 		numMessages = MaxRetrieveSize
 	}
-	if numMessages < 0 {
-		numMessages = 0
+	if numMessages < -MaxRetrieveSize {
+		numMessages = -MaxRetrieveSize
 	}
 
-	msgs := store.GetBeforeTime(
-		listener.User.ID,
-		listener.ServerConnection.Name,
-		target,
-		timeFrom,
-		numMessages,
-	)
-
-	batchId := makeBatchId()
-	listener.Send(nil, "", "BATCH", "+"+batchId, "chathistory", target)
-
-	for _, message := range msgs {
-		message.Tags["batch"] = ircmsg.MakeTagValue(batchId)
-		line, err := message.Line()
-		if err != nil {
-			log.Println("Error building message from storage:", err.Error())
+	for _, buffer := range listener.ServerConnection.Buffers {
+		// If target == * then send all available buffers
+		if target != "*" && strings.ToLower(target) != strings.ToLower(buffer.Name) {
 			continue
 		}
-		listener.SendLine(line)
-	}
 
-	listener.Send(nil, "", "BATCH", "-"+batchId)
+		var msgs []*ircmsg.IrcMessage
+		if numMessages < 0 {
+			msgs = store.GetBeforeTime(
+				listener.User.ID,
+				listener.ServerConnection.Name,
+				buffer.Name,
+				timeFrom,
+				numMessages*-1,
+			)
+		} else {
+			msgs = store.GetFromTime(
+				listener.User.ID,
+				listener.ServerConnection.Name,
+				buffer.Name,
+				timeFrom,
+				numMessages,
+			)
+		}
+
+		batchId := makeBatchId()
+		listener.Send(nil, "", "BATCH", "+"+batchId, "chathistory", buffer.Name)
+
+		for _, message := range msgs {
+			message.Tags["batch"] = ircmsg.MakeTagValue(batchId)
+			line, err := message.Line()
+			if err != nil {
+				log.Println("Error building message from storage:", err.Error())
+				continue
+			}
+			listener.SendLine(line)
+		}
+
+		listener.Send(nil, "", "BATCH", "-"+batchId)
+	}
 }
 
 func makeBatchId() string {
