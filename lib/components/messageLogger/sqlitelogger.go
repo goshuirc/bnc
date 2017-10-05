@@ -105,45 +105,17 @@ func (ds *SqliteMessageDatastore) Store(event *ircbnc.HookIrcRaw) {
 	}
 }
 func (ds *SqliteMessageDatastore) GetFromTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
-	return []*ircmsg.IrcMessage{}
-}
-func (ds *SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
 	messages := []*ircmsg.IrcMessage{}
 
-	sql := "SELECT ts, fromNick, type, line FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts < ? ORDER BY ts DESC LIMIT ?"
+	sql := "SELECT ts, fromNick, type, line, buffer FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts > ? ORDER BY ts DESC LIMIT ?"
 	rows, err := ds.db.Query(sql, userID, networkID, strings.ToLower(buffer), int32(from.UTC().Unix()), num)
 	if err != nil {
 		log.Println("GetBeforeTime() error: " + err.Error())
 		return messages
 	}
 	for rows.Next() {
-		var ts int32
-		var from string
-		var messageType int
-		var line string
-		rows.Scan(&ts, &from, &messageType, &line)
-
-		v := ircmsg.TagValue{}
-		v.Value = time.Unix(int64(ts), 0).UTC().Format(time.RFC3339)
-		v.HasValue = true
-		mTags := make(map[string]ircmsg.TagValue)
-		mTags["time"] = v
-
-		mPrefix := from
-		mCommand := "PRIVMSG"
-		mParams := []string{
-			buffer,
-			line,
-		}
-
-		if messageType == TYPE_ACTION {
-			mParams[1] = "\x01" + mParams[1]
-		} else if messageType == TYPE_NOTICE {
-			mCommand = "NOTICE"
-		}
-
-		m := ircmsg.MakeMessage(&mTags, mPrefix, mCommand, mParams...)
-		messages = append(messages, &m)
+		m := rowToIrcMessage(rows)
+		messages = append(messages, m)
 	}
 
 	// Reverse the messages so they're in order
@@ -152,11 +124,63 @@ func (ds *SqliteMessageDatastore) GetBeforeTime(userID string, networkID string,
 		messages[i], messages[j] = messages[j], messages[i]
 	}
 
-	// TODO: Private messages should be stored with the buffer name as the other user.
+	return messages
+}
+func (ds *SqliteMessageDatastore) GetBeforeTime(userID string, networkID string, buffer string, from time.Time, num int) []*ircmsg.IrcMessage {
+	messages := []*ircmsg.IrcMessage{}
+
+	sql := "SELECT ts, fromNick, type, line, buffer FROM messages WHERE uid = ? AND netid = ? AND buffer = ? AND ts < ? ORDER BY ts DESC LIMIT ?"
+	rows, err := ds.db.Query(sql, userID, networkID, strings.ToLower(buffer), int32(from.UTC().Unix()), num)
+	if err != nil {
+		log.Println("GetBeforeTime() error: " + err.Error())
+		return messages
+	}
+	for rows.Next() {
+		m := rowToIrcMessage(rows)
+		messages = append(messages, m)
+	}
+
+	// Reverse the messages so they're in order
+	for i := 0; i < len(messages)/2; i++ {
+		j := len(messages) - i - 1
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
 	return messages
 }
 func (ds *SqliteMessageDatastore) Search(string, string, string, time.Time, time.Time, int) []*ircmsg.IrcMessage {
 	return []*ircmsg.IrcMessage{}
+}
+
+func rowToIrcMessage(rows *sql.Rows) *ircmsg.IrcMessage {
+	var ts int32
+	var from string
+	var messageType int
+	var line string
+	var buffer string
+	rows.Scan(&ts, &from, &messageType, &line, &buffer)
+
+	v := ircmsg.TagValue{}
+	v.Value = time.Unix(int64(ts), 0).UTC().Format(time.RFC3339)
+	v.HasValue = true
+	mTags := make(map[string]ircmsg.TagValue)
+	mTags["time"] = v
+
+	mPrefix := from
+	mCommand := "PRIVMSG"
+	mParams := []string{
+		buffer,
+		line,
+	}
+
+	if messageType == TYPE_ACTION {
+		mParams[1] = "\x01" + mParams[1]
+	} else if messageType == TYPE_NOTICE {
+		mCommand = "NOTICE"
+	}
+
+	m := ircmsg.MakeMessage(&mTags, mPrefix, mCommand, mParams...)
+	return &m
 }
 
 func extractMessageParts(event *ircbnc.HookIrcRaw) (string, string, int, string) {
