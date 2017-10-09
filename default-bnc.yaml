@@ -1,23 +1,23 @@
+---
 # This is the GoshuBNC config file
 
 # bouncer configuration
 bouncer:
-    storage:
-        type: buntdb
-        database: bncdata.db
+  storage:
+    type: buntdb
+    database: bncdata.db
 
     # addresses to listen on
     listeners:
-        #- ":6667"
-        - ":6697"
+      #- ":6667"
+      - ":6697"
 
     # listeners to use tls on
     tls-listeners:
-        ":6697":
-            cert: tls.crt
-            key: tls.key
+      ":6697":
+        cert: tls.crt
+        key: tls.key
 
-    logging:
-        file:
-            # folder to store chat logs
-            path: chatlogs/
+        logging:
+          # folder to store chat logs
+          path: chatlogs/
