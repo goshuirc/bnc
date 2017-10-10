@@ -92,7 +92,7 @@ _testmain.go
 
 ### GoshuBNC ###
 /bncdata.*
-/chatlogs
+/chatlogs*
 /bnc.*
 !/bnc.go
 /tls.*
