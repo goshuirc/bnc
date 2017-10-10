@@ -38,7 +38,7 @@ Options:
 	configfile := arguments["--conf"].(string)
 	config, err := ircbnc.LoadConfig(configfile)
 	if err != nil {
-		log.Fatal("Config file did not load successfully:", err.Error())
+		log.Fatal("Config file did not load successfully: ", err.Error())
 	}
 
 	data, dataType := getDataStoreInstance(config)
