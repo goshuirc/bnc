@@ -17,7 +17,14 @@ bouncer:
             cert: tls.crt
             key: tls.key
 
+    # logging of channel/client messages
     logging:
-        file:
-            # folder to store chat logs
-            path: chatlogs/
+        # file logger
+        type: file
+        # folder to store chat logs
+        path: chatlogs/
+
+        # # sqlite logger
+        # type: sqlite
+        # # database to use for chatlogs
+        # database: chatlogs.db
