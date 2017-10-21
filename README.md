@@ -10,7 +10,7 @@ GoshuBNC is an experimental IRC bouncer written in Go. It's designed to be simpl
 
 ---
 
-This project adheres to [Semantic Versioning](http://semver.org/). For the purposes of versioning, we consider the "public API" to refer to the configuration files, CLI interface and database format.
+This project adheres to [Semantic Versioning](http://semver.org/). For the purposes of versioning, we consider the "public API" to refer to the configuration files, CLI, and database format.
 
 ## Features
 
