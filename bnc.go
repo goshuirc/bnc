@@ -33,7 +33,7 @@ Options:
 	-h --help          Show this screen.
 	--version          Show version.`
 
-	arguments, _ := docopt.ParseArgs(usage, nil, ircbnc.SemVer)
+	arguments, _ := docopt.Parse(usage, nil, true, ircbnc.SemVer, false)
 
 	configfile := arguments["--conf"].(string)
 	config, err := ircbnc.LoadConfig(configfile)
