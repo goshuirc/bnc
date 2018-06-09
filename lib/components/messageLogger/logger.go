@@ -40,6 +40,11 @@ func getMessageDataStoreInstance(config *ircbnc.Config) (ircbnc.MessageDatastore
 		store = NewFileMessageDatastore(loggingConfig)
 	} else if storageType == "sqlite" {
 		store = NewSqliteMessageDatastore(loggingConfig)
+		if !(store.SupportsStore() || store.SupportsRetrieve() || store.SupportsSearch()) {
+			store = nil
+			storageType = ""
+			fmt.Println("SQLite message logger can't be loaded as goshubnc has been compiled without SQLite support")
+		}
 	} else {
 		// No recognised storage type. Blank it off
 		storageType = ""
